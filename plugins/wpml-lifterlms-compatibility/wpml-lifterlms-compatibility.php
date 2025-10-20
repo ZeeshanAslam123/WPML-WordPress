@@ -381,6 +381,9 @@ class WPML_LifterLMS_Compatibility {
                 $this->components['admin'] = new WPML_LifterLMS_Admin();
                 $this->components['admin']->init();
                 
+                // Initialize course fixer
+                $this->components['course_fixer'] = WPML_LifterLMS_Course_Fixer::get_instance();
+                
             } catch (Exception $e) {
                 if (isset($this->components['logger'])) {
                     $this->components['logger']->error('Failed to initialize admin components: ' . $e->getMessage());
