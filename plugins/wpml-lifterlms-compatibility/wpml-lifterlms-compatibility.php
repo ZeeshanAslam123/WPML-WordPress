@@ -382,7 +382,13 @@ class WPML_LifterLMS_Compatibility {
                 $this->components['admin']->init();
                 
                 // Initialize course fixer
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('WPML LifterLMS: Initializing course fixer');
+                }
                 $this->components['course_fixer'] = WPML_LifterLMS_Course_Fixer::get_instance();
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('WPML LifterLMS: Course fixer initialized successfully');
+                }
                 
             } catch (Exception $e) {
                 if (isset($this->components['logger'])) {

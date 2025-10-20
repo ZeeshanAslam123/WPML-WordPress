@@ -42,8 +42,18 @@ class WPML_LifterLMS_Course_Fixer {
      * Constructor
      */
     private function __construct() {
+        // Debug: Log that the course fixer is being constructed
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('WPML LifterLMS Course Fixer: Constructor called');
+        }
+        
         $this->relationships = WPML_LifterLMS_Relationships::get_instance();
         $this->init_hooks();
+        
+        // Debug: Log that initialization is complete
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('WPML LifterLMS Course Fixer: Initialization complete');
+        }
     }
     
     /**
@@ -56,13 +66,30 @@ class WPML_LifterLMS_Course_Fixer {
         // AJAX handlers
         add_action('wp_ajax_wpml_llms_get_english_courses', array($this, 'handle_get_english_courses'));
         add_action('wp_ajax_wpml_llms_fix_course_relationships', array($this, 'handle_fix_course_relationships'));
+        
+        // Debug: Add admin notice to verify plugin is loading
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            add_action('admin_notices', array($this, 'debug_admin_notice'));
+        }
+    }
+    
+    /**
+     * Debug admin notice
+     */
+    public function debug_admin_notice() {
+        echo '<div class="notice notice-info"><p>WPML LifterLMS Course Fixer is loaded and active!</p></div>';
     }
     
     /**
      * Add admin menu page
      */
     public function add_admin_menu() {
-        add_menu_page(
+        // Debug: Log that this method is being called
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('WPML LifterLMS Course Fixer: Adding admin menu');
+        }
+        
+        $hook = add_menu_page(
             __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
             __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
             'manage_options',
@@ -71,6 +98,11 @@ class WPML_LifterLMS_Course_Fixer {
             'dashicons-admin-tools',
             30
         );
+        
+        // Debug: Log the hook result
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('WPML LifterLMS Course Fixer: Menu hook created: ' . $hook);
+        }
     }
     
     /**
@@ -601,4 +633,3 @@ class WPML_LifterLMS_Course_Fixer {
         return array('success' => $success, 'logs' => $logs);
     }
 }
-
