@@ -38,7 +38,7 @@ class WPML_LifterLMS_Custom_Fields {
         add_action('wpml_loaded', array($this, 'setup_wpml_integration'));
         
         // Handle custom field translation
-        add_filter('wpml_custom_field_values_for_post_signature', array($this, 'filter_custom_field_values'), 10, 3);
+        add_filter('wpml_custom_field_values_for_post_signature', array($this, 'filter_custom_field_values'), 10, 2);
         add_filter('wpml_duplicate_generic_string', array($this, 'handle_field_duplication'), 10, 3);
         
         // Handle meta field synchronization
@@ -405,11 +405,16 @@ class WPML_LifterLMS_Custom_Fields {
      * Filter custom field values for post signature
      * @param array $values
      * @param int $post_id
-     * @param string $post_type
+     * @param string $post_type (optional)
      * @return array
      */
-    public function filter_custom_field_values($values, $post_id, $post_type) {
-        if (!isset($this->fields_config[$post_type])) {
+    public function filter_custom_field_values($values, $post_id, $post_type = null) {
+        // If post_type is not provided, get it from the post
+        if ($post_type === null) {
+            $post_type = get_post_type($post_id);
+        }
+        
+        if (!$post_type || !isset($this->fields_config[$post_type])) {
             return $values;
         }
         
@@ -863,4 +868,3 @@ class WPML_LifterLMS_Custom_Fields {
         return $this->fields_config;
     }
 }
-
