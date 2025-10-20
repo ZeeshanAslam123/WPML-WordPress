@@ -51,11 +51,8 @@
 - **Language switcher** - Seamless switching between course versions
 
 ### ✅ Performance & Optimization
-- **Advanced caching system** - Translation cache, query optimization
-- **Object cache integration** - Redis/Memcached support
 - **Database optimization** - Efficient multilingual queries
 - **Background processing** - Heavy operations don't block UI
-- **Cache warming** - Pre-load frequently accessed translations
 
 ### ✅ Admin & Management Tools
 - **Comprehensive admin interface** - Easy configuration and monitoring
@@ -74,7 +71,6 @@
 ### Recommended
 - **WPML String Translation** - For complete string translation
 - **WPML Multi-Currency** - For multi-currency e-commerce
-- **Object Cache** (Redis/Memcached) - For optimal performance
 
 ## 🔧 Installation
 
@@ -218,24 +214,18 @@ add_action('wpml_lifterlms_progress_synced', function($user_id, $post_id, $post_
     // Custom logic after progress sync
 });
 
-// Hook into cache clearing
-add_action('wpml_lifterlms_cache_cleared', function() {
-    // Custom cache clearing logic
-});
+
 ```
 
 ## 📊 Performance
 
 ### Benchmarks
-- **Translation queries**: 95% faster with caching enabled
-- **Course catalog loading**: 80% improvement with object cache
 - **User dashboard**: 70% faster multilingual rendering
 - **Memory usage**: Optimized for large multilingual sites
 
 ### Optimization Tips
-1. **Enable object caching** (Redis/Memcached)
-2. **Use CDN** for static multilingual assets
-3. **Configure cache warming** for frequently accessed content
+1. **Use CDN** for static multilingual assets
+2. **Optimize database queries** for better performance
 4. **Monitor performance** via built-in tools
 
 ## 🤝 Contributing
@@ -303,4 +293,3 @@ GNU General Public License for more details.
 ---
 
 **Made with ❤️ for the WordPress multilingual community**
-

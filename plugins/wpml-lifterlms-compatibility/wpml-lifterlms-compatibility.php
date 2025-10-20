@@ -181,9 +181,7 @@ class WPML_LifterLMS_Compatibility {
         $this->components['logger'] = new WPML_LifterLMS_Logger();
         $this->components['logger']->init();
         
-        // Initialize cache system early
-        $this->components['cache'] = new WPML_LifterLMS_Cache();
-        $this->components['cache']->init();
+
         
         // Initialize other components on demand using hooks
         add_action('init', array($this, 'init_core_components'), 15);
@@ -604,13 +602,7 @@ class WPML_LifterLMS_Compatibility {
      */
     public function deactivate() {
         // Clear any scheduled events
-        wp_clear_scheduled_hook('wpml_lifterlms_cache_cleanup');
         wp_clear_scheduled_hook('wpml_lifterlms_log_cleanup');
-        
-        // Clear cache if available
-        if (isset($this->components['cache'])) {
-            $this->components['cache']->clear_all_cache();
-        }
         
         // Clean up memory
         $this->cleanup_memory();
