@@ -370,9 +370,6 @@ class WPML_LifterLMS_Compatibility {
                 $this->components['admin'] = new WPML_LifterLMS_Admin();
                 $this->components['admin']->init();
                 
-                // Add WPML submenu
-                add_action('admin_menu', array($this, 'add_wpml_submenu'), 20);
-                
                 // Initialize course fixer
                 
                 // Manually require the course fixer file to ensure it's loaded

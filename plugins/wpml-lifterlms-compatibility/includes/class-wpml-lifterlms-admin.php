@@ -40,14 +40,29 @@ class WPML_LifterLMS_Admin {
      * Add admin menu
      */
     public function add_admin_menu() {
-        add_submenu_page(
-            'sitepress-multilingual-cms/menu/languages.php',
-            __('LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
-            __('LifterLMS', 'wpml-lifterlms-compatibility'),
-            'manage_options',
-            'wpml-lifterlms-compatibility',
-            array($this, 'admin_page')
-        );
+        // Try to add as WPML submenu first, fallback to standalone menu
+        if (defined('ICL_SITEPRESS_VERSION') && function_exists('icl_get_languages')) {
+            // Add as WPML submenu if WPML is active
+            add_submenu_page(
+                'sitepress-multilingual-cms/menu/languages.php',
+                __('LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
+                __('LifterLMS', 'wpml-lifterlms-compatibility'),
+                'manage_options',
+                'wpml-lifterlms-compatibility',
+                array($this, 'admin_page')
+            );
+        } else {
+            // Add as standalone menu if WPML is not active or accessible
+            add_menu_page(
+                __('WPML LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
+                __('WPML LifterLMS', 'wpml-lifterlms-compatibility'),
+                'manage_options',
+                'wpml-lifterlms-compatibility',
+                array($this, 'admin_page'),
+                'dashicons-translation',
+                30
+            );
+        }
     }
     
     /**
