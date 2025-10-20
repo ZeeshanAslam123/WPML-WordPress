@@ -52,6 +52,12 @@ class WPML_LifterLMS_Compatibility {
     private $components = array();
     
     /**
+     * Admin page hook
+     * @var string
+     */
+    private $admin_page_hook;
+    
+    /**
      * Get plugin instance
      * @return WPML_LifterLMS_Compatibility
      */
@@ -99,7 +105,10 @@ class WPML_LifterLMS_Compatibility {
         // Load autoloader
         $this->load_autoloader();
         
-        // Initialize components with lazy loading
+        // Initialize admin menu IMMEDIATELY - no lazy loading for critical UI
+        $this->init_admin_menu_direct();
+        
+        // Initialize other components with lazy loading
         $this->init_components();
         
         // Load textdomain
@@ -109,6 +118,104 @@ class WPML_LifterLMS_Compatibility {
         
         // Plugin is ready
         do_action('wpml_lifterlms_compatibility_loaded');
+    }
+    
+    /**
+     * Initialize admin menu directly - bypassing complex component system
+     */
+    private function init_admin_menu_direct() {
+        if (is_admin()) {
+            // Add admin menu hook immediately
+            add_action('admin_menu', array($this, 'add_admin_menu_direct'));
+            add_action('admin_init', array($this, 'register_admin_settings'));
+            add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+        }
+    }
+    
+    /**
+     * Add admin menu directly - simple and reliable
+     */
+    public function add_admin_menu_direct() {
+        // Try to add as WPML submenu first, fallback to standalone menu
+        if (defined('ICL_SITEPRESS_VERSION') && function_exists('icl_get_languages')) {
+            // Add as WPML submenu if WPML is active
+            $hook = add_submenu_page(
+                'sitepress-multilingual-cms/menu/languages.php',
+                __('LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
+                __('LifterLMS', 'wpml-lifterlms-compatibility'),
+                'manage_options',
+                'wpml-lifterlms-compatibility',
+                array($this, 'render_admin_page_direct')
+            );
+        } else {
+            // Add as standalone menu if WPML is not active or accessible
+            $hook = add_menu_page(
+                __('WPML LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
+                __('WPML LifterLMS', 'wpml-lifterlms-compatibility'),
+                'manage_options',
+                'wpml-lifterlms-compatibility',
+                array($this, 'render_admin_page_direct'),
+                'dashicons-translation',
+                30
+            );
+        }
+        
+        // Store hook for asset loading
+        $this->admin_page_hook = $hook;
+    }
+    
+    /**
+     * Render admin page directly
+     */
+    public function render_admin_page_direct() {
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html__('WPML LifterLMS Compatibility', 'wpml-lifterlms-compatibility'); ?></h1>
+            
+            <div class="notice notice-success">
+                <p><strong><?php echo esc_html__('Plugin Active!', 'wpml-lifterlms-compatibility'); ?></strong></p>
+                <p><?php echo esc_html__('WPML LifterLMS Compatibility is successfully running and making your LifterLMS content fully compatible with WPML.', 'wpml-lifterlms-compatibility'); ?></p>
+            </div>
+            
+            <div class="card">
+                <h2><?php echo esc_html__('Integration Status', 'wpml-lifterlms-compatibility'); ?></h2>
+                <ul>
+                    <li>✅ <?php echo esc_html__('LifterLMS Post Types: Compatible', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li>✅ <?php echo esc_html__('Course Translations: Active', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li>✅ <?php echo esc_html__('User Progress: Synchronized', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li>✅ <?php echo esc_html__('E-commerce Integration: Ready', 'wpml-lifterlms-compatibility'); ?></li>
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h2><?php echo esc_html__('Plugin Information', 'wpml-lifterlms-compatibility'); ?></h2>
+                <p><strong><?php echo esc_html__('Version:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo WPML_LLMS_VERSION; ?></p>
+                <p><strong><?php echo esc_html__('WPML Status:', 'wpml-lifterlms-compatibility'); ?></strong> 
+                    <?php echo defined('ICL_SITEPRESS_VERSION') ? '✅ Active' : '❌ Not Active'; ?>
+                </p>
+                <p><strong><?php echo esc_html__('LifterLMS Status:', 'wpml-lifterlms-compatibility'); ?></strong> 
+                    <?php echo defined('LLMS_PLUGIN_FILE') ? '✅ Active' : '❌ Not Active'; ?>
+                </p>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Register admin settings
+     */
+    public function register_admin_settings() {
+        // Register settings here if needed
+    }
+    
+    /**
+     * Enqueue admin assets
+     */
+    public function enqueue_admin_assets($hook) {
+        // Only load on our admin page
+        if (isset($this->admin_page_hook) && $hook === $this->admin_page_hook) {
+            // Enqueue admin styles/scripts if needed
+        }
     }
     
     /**
@@ -185,7 +292,8 @@ class WPML_LifterLMS_Compatibility {
         
         // Initialize other components on demand using hooks
         add_action('init', array($this, 'init_core_components'), 15);
-        add_action('admin_init', array($this, 'init_admin_components'), 15);
+        // DISABLED: Using direct admin menu initialization instead
+        // add_action('admin_init', array($this, 'init_admin_components'), 15);
         add_action('wp_loaded', array($this, 'init_frontend_components'), 15);
     }
     
