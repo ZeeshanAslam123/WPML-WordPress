@@ -216,7 +216,7 @@ class WPML_LifterLMS_Compatibility {
                 $this->components['custom_fields'] = new WPML_LifterLMS_Custom_Fields();
                 $this->components['custom_fields']->init();
                 
-                $this->components['relationships'] = new WPML_LifterLMS_Relationships();
+                $this->components['relationships'] = WPML_LifterLMS_Relationships::get_instance();
                 $this->components['relationships']->init();
                 
             } catch (Exception $e) {

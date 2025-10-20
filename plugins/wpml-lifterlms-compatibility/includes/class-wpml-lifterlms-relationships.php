@@ -20,9 +20,27 @@ if (!defined('ABSPATH')) {
 class WPML_LifterLMS_Relationships {
     
     /**
+     * Singleton instance
+     * @var WPML_LifterLMS_Relationships
+     */
+    private static $instance = null;
+    
+    /**
+     * Get singleton instance
+     * 
+     * @return WPML_LifterLMS_Relationships
+     */
+    public static function get_instance() {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+    
+    /**
      * Constructor
      */
-    public function __construct() {
+    private function __construct() {
         // Initialize hooks
         $this->init_hooks();
     }
