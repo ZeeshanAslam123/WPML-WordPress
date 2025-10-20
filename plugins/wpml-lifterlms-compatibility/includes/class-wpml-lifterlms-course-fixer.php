@@ -42,17 +42,19 @@ class WPML_LifterLMS_Course_Fixer {
      * Constructor
      */
     private function __construct() {
-        // Debug: Log that the course fixer is being constructed
+        // Debug: Show that the course fixer is being constructed
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('WPML LifterLMS Course Fixer: Constructor called');
+            echo '<pre>WPML LifterLMS Course Fixer: Constructor called</pre>';
+            var_dump('Course Fixer Constructor - Starting initialization');
         }
         
         $this->relationships = WPML_LifterLMS_Relationships::get_instance();
         $this->init_hooks();
         
-        // Debug: Log that initialization is complete
+        // Debug: Show that initialization is complete
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('WPML LifterLMS Course Fixer: Initialization complete');
+            echo '<pre>WPML LifterLMS Course Fixer: Initialization complete</pre>';
+            var_dump('Course Fixer Constructor - Initialization complete');
         }
     }
     
@@ -84,9 +86,10 @@ class WPML_LifterLMS_Course_Fixer {
      * Add admin menu page
      */
     public function add_admin_menu() {
-        // Debug: Log that this method is being called
+        // Debug: Show that this method is being called
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('WPML LifterLMS Course Fixer: Adding admin menu');
+            echo '<pre>WPML LifterLMS Course Fixer: Adding admin menu</pre>';
+            var_dump('add_admin_menu() method called');
         }
         
         $hook = add_menu_page(
@@ -99,9 +102,10 @@ class WPML_LifterLMS_Course_Fixer {
             30
         );
         
-        // Debug: Log the hook result
+        // Debug: Show the hook result
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('WPML LifterLMS Course Fixer: Menu hook created: ' . $hook);
+            echo '<pre>WPML LifterLMS Course Fixer: Menu hook created</pre>';
+            var_dump('Menu hook result', $hook);
         }
     }
     

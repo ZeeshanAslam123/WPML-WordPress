@@ -33,9 +33,10 @@ class WPML_LifterLMS_Autoloader {
             return;
         }
         
-        // Debug: Log autoload attempts
+        // Debug: Show autoload attempts
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('WPML LifterLMS Autoloader: Attempting to load class: ' . $class_name);
+            echo '<pre>WPML LifterLMS Autoloader: Attempting to load class</pre>';
+            var_dump('Autoloader called for class', $class_name);
         }
         
         // Convert class name to file name
@@ -44,20 +45,25 @@ class WPML_LifterLMS_Autoloader {
         // Build file path
         $file_path = WPML_LLMS_PLUGIN_DIR . 'includes/' . $file_name;
         
-        // Debug: Log file path
+        // Debug: Show file path
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('WPML LifterLMS Autoloader: Looking for file: ' . $file_path);
+            echo '<pre>WPML LifterLMS Autoloader: Looking for file</pre>';
+            var_dump('Generated filename', $file_name);
+            var_dump('Full file path', $file_path);
+            var_dump('File exists?', file_exists($file_path));
         }
         
         // Load the file if it exists
         if (file_exists($file_path)) {
             require_once $file_path;
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('WPML LifterLMS Autoloader: Successfully loaded: ' . $file_path);
+                echo '<pre>WPML LifterLMS Autoloader: Successfully loaded file</pre>';
+                var_dump('File loaded successfully', $file_path);
             }
         } else {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('WPML LifterLMS Autoloader: File not found: ' . $file_path);
+                echo '<pre>WPML LifterLMS Autoloader: File not found</pre>';
+                var_dump('File not found', $file_path);
             }
         }
     }
