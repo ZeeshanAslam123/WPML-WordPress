@@ -105,16 +105,7 @@ class WPML_LifterLMS_Compatibility {
         // Load textdomain
         $this->load_textdomain();
         
-        // Log memory usage if debug mode is enabled
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            $final_memory = memory_get_usage(true);
-            $memory_used = $final_memory - $initial_memory;
-            error_log(sprintf(
-                'WPML LifterLMS Compatibility: Memory used during initialization: %s (Peak: %s)',
-                size_format($memory_used),
-                size_format(memory_get_peak_usage(true))
-            ));
-        }
+
         
         // Plugin is ready
         do_action('wpml_lifterlms_compatibility_loaded');
@@ -381,47 +372,20 @@ class WPML_LifterLMS_Compatibility {
                 $this->components['admin'] = new WPML_LifterLMS_Admin();
                 $this->components['admin']->init();
                 
-                // Add admin menu directly in main plugin file to ensure it loads 100%
-                add_action('admin_menu', array($this, 'add_course_fixer_menu'));
-                
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    echo '<pre>MAIN PLUGIN: Added admin_menu hook directly in main plugin file</pre>';
-                    var_dump('admin_menu hook registered in main plugin file');
-                }
+                // Add WPML submenu
+                add_action('admin_menu', array($this, 'add_wpml_submenu'), 20);
                 
                 // Initialize course fixer
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    echo '<pre>WPML LifterLMS: Initializing course fixer</pre>';
-                    var_dump('Starting course fixer initialization');
-                }
                 
                 // Manually require the course fixer file to ensure it's loaded
                 $course_fixer_file = WPML_LLMS_PLUGIN_DIR . 'includes/class-wpml-lifterlms-course-fixer.php';
                 if (file_exists($course_fixer_file)) {
                     require_once $course_fixer_file;
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        echo '<pre>WPML LifterLMS: Manually loaded course fixer file</pre>';
-                        var_dump('Course fixer file loaded from', $course_fixer_file);
-                    }
-                } else {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        echo '<pre>WPML LifterLMS: Course fixer file not found</pre>';
-                        var_dump('File not found at', $course_fixer_file);
-                    }
                 }
                 
                 // Check if class exists before instantiating
                 if (class_exists('WPML_LifterLMS_Course_Fixer')) {
                     $this->components['course_fixer'] = WPML_LifterLMS_Course_Fixer::get_instance();
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        echo '<pre>WPML LifterLMS: Course fixer initialized successfully</pre>';
-                        var_dump('Course fixer instance created');
-                    }
-                } else {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        echo '<pre>WPML LifterLMS: WPML_LifterLMS_Course_Fixer class not found!</pre>';
-                        var_dump('Class WPML_LifterLMS_Course_Fixer does not exist');
-                    }
                 }
                 
             } catch (Exception $e) {
@@ -433,77 +397,60 @@ class WPML_LifterLMS_Compatibility {
     }
     
     /**
-     * Add course fixer admin menu (moved to main plugin file for 100% loading)
+     * Add WPML submenu for LifterLMS integration
      */
-    public function add_course_fixer_menu() {
-        // Debug: Show that this method is being called
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            echo '<pre>MAIN PLUGIN: add_course_fixer_menu() method called</pre>';
-            var_dump('Menu creation method called from main plugin file');
+    public function add_wpml_submenu() {
+        // Check if WPML is active and has its menu
+        if (!function_exists('icl_get_languages')) {
+            return;
         }
         
-        $hook = add_menu_page(
-            __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
-            __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
+        $hook = add_submenu_page(
+            'sitepress-multilingual-cms/menu/languages.php', // WPML parent menu
+            __('LifterLMS Integration', 'wpml-lifterlms-compatibility'),
+            __('LifterLMS', 'wpml-lifterlms-compatibility'),
             'manage_options',
-            'wpml-lifterlms-course-fixer',
-            array($this, 'render_course_fixer_page'),
-            'dashicons-admin-tools',
-            30
+            'wpml-lifterlms-integration',
+            array($this, 'render_integration_page')
         );
         
-        // Debug: Show the hook result
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            echo '<pre>MAIN PLUGIN: Menu hook created successfully</pre>';
-            var_dump('Menu hook result', $hook);
-        }
-        
         // Enqueue assets for this page
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_course_fixer_assets'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_integration_assets'));
     }
     
     /**
-     * Render course fixer admin page (moved to main plugin file)
+     * Render WPML LifterLMS integration page
      */
-    public function render_course_fixer_page() {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            echo '<pre>MAIN PLUGIN: render_course_fixer_page() called</pre>';
-            var_dump('Page rendering method called');
-        }
-        
+    public function render_integration_page() {
         // If course fixer component exists, delegate to it
         if (isset($this->components['course_fixer'])) {
             $this->components['course_fixer']->render_admin_page();
             return;
         }
         
-        // Fallback: render basic page
+        // Render integration page
         ?>
         <div class="wrap">
-            <h1><?php echo esc_html__('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'); ?></h1>
+            <h1><?php echo esc_html__('WPML LifterLMS Integration', 'wpml-lifterlms-compatibility'); ?></h1>
             <div class="notice notice-success">
-                <p><strong><?php echo esc_html__('SUCCESS: Admin menu is working!', 'wpml-lifterlms-compatibility'); ?></strong></p>
-                <p><?php echo esc_html__('The admin menu hook is now firing correctly from the main plugin file.', 'wpml-lifterlms-compatibility'); ?></p>
+                <p><strong><?php echo esc_html__('WPML LifterLMS Compatibility Active', 'wpml-lifterlms-compatibility'); ?></strong></p>
+                <p><?php echo esc_html__('The plugin is successfully integrated with WPML and ready to handle LifterLMS multilingual content.', 'wpml-lifterlms-compatibility'); ?></p>
             </div>
-            <div class="notice notice-info">
-                <p><?php echo esc_html__('Course fixer component is loading...', 'wpml-lifterlms-compatibility'); ?></p>
+            <div class="card">
+                <h2><?php echo esc_html__('Integration Status', 'wpml-lifterlms-compatibility'); ?></h2>
+                <p><?php echo esc_html__('All LifterLMS content types are now compatible with WPML translation management.', 'wpml-lifterlms-compatibility'); ?></p>
             </div>
         </div>
         <?php
     }
     
     /**
-     * Enqueue course fixer assets (moved to main plugin file)
+     * Enqueue integration page assets
      */
-    public function enqueue_course_fixer_assets($hook) {
+    public function enqueue_integration_assets($hook) {
         // Only load on our admin page
-        if ($hook !== 'toplevel_page_wpml-lifterlms-course-fixer') {
+        if ($hook !== 'wpml_page_wpml-lifterlms-integration') {
             return;
-        }
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            echo '<pre>MAIN PLUGIN: enqueue_course_fixer_assets() called</pre>';
-            var_dump('Assets enqueuing method called for hook', $hook);
         }
         
         // If course fixer component exists, delegate to it

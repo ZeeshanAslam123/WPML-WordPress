@@ -171,8 +171,7 @@ class WPML_LifterLMS_Relationships {
      * @param int $translated_course_id
      */
     private function sync_course_relationships($original_course_id, $translated_course_id) {
-        // Debug logging
-        error_log("WPML-LifterLMS: Syncing course relationships - Original: {$original_course_id}, Translated: {$translated_course_id}");
+
         
         // Get original course sections using LifterLMS method
         $original_sections = get_posts(array(
@@ -186,12 +185,12 @@ class WPML_LifterLMS_Relationships {
             'order' => 'ASC'
         ));
         
-        error_log("WPML-LifterLMS: Found " . count($original_sections) . " sections for course {$original_course_id}");
+
         
         foreach ($original_sections as $section) {
             $translated_section_id = apply_filters('wpml_object_id', $section->ID, 'section', false, $this->get_post_language($translated_course_id));
             if ($translated_section_id) {
-                error_log("WPML-LifterLMS: Syncing section {$section->ID} -> {$translated_section_id}");
+
                 
                 // Update section's parent course to point to translated course
                 update_post_meta($translated_section_id, '_llms_parent_course', $translated_course_id);
@@ -199,7 +198,7 @@ class WPML_LifterLMS_Relationships {
                 // Also sync the section's lessons
                 $this->sync_section_relationships($section->ID, $translated_section_id);
             } else {
-                error_log("WPML-LifterLMS: No translated section found for {$section->ID}");
+
             }
         }
         
@@ -377,79 +376,5 @@ class WPML_LifterLMS_Relationships {
         return defined('ICL_SITEPRESS_VERSION');
     }
     
-    /**
-     * Debug method to check current relationship state
-     * 
-     * @param int $course_id
-     */
-    public function debug_course_relationships($course_id) {
-        error_log("=== DEBUGGING COURSE RELATIONSHIPS FOR COURSE ID: {$course_id} ===");
-        
-        // Check course language
-        $course_lang = $this->get_post_language($course_id);
-        error_log("Course {$course_id} language: {$course_lang}");
-        
-        // Check if course exists
-        $course_post = get_post($course_id);
-        if (!$course_post) {
-            error_log("ERROR: Course {$course_id} does not exist!");
-            return;
-        }
-        error_log("Course {$course_id} exists: {$course_post->post_title} (status: {$course_post->post_status})");
-        
-        // Try LifterLMS method
-        if (class_exists('LLMS_Course')) {
-            $course = new LLMS_Course($course_id);
-            $sections = $course->get_sections();
-            error_log("LifterLMS get_sections() returned: " . count($sections) . " sections");
-        } else {
-            error_log("LLMS_Course class not found!");
-        }
-        
-        // Try direct query method
-        $direct_sections = get_posts(array(
-            'post_type' => 'section',
-            'meta_key' => '_llms_parent_course',
-            'meta_value' => $course_id,
-            'posts_per_page' => -1,
-            'post_status' => 'publish'
-        ));
-        error_log("Direct query found: " . count($direct_sections) . " sections");
-        
-        // List all sections found
-        foreach ($direct_sections as $section) {
-            $section_lang = $this->get_post_language($section->ID);
-            $parent_course = get_post_meta($section->ID, '_llms_parent_course', true);
-            error_log("Section {$section->ID}: '{$section->post_title}' (lang: {$section_lang}, parent: {$parent_course})");
-        }
-        
-        // Check for any sections in any language that might be related
-        $all_sections = get_posts(array(
-            'post_type' => 'section',
-            'posts_per_page' => -1,
-            'post_status' => 'publish'
-        ));
-        
-        $related_sections = array();
-        foreach ($all_sections as $section) {
-            $parent_course = get_post_meta($section->ID, '_llms_parent_course', true);
-            if ($parent_course) {
-                // Check if this section's parent course is a translation of our course
-                $original_course = apply_filters('wpml_object_id', $parent_course, 'course', false, null);
-                $translated_course = apply_filters('wpml_object_id', $course_id, 'course', false, null);
-                
-                if ($original_course == $translated_course || $parent_course == $course_id) {
-                    $section_lang = $this->get_post_language($section->ID);
-                    $related_sections[] = "Section {$section->ID}: '{$section->post_title}' (lang: {$section_lang}, parent: {$parent_course})";
-                }
-            }
-        }
-        
-        error_log("Related sections found: " . count($related_sections));
-        foreach ($related_sections as $info) {
-            error_log($info);
-        }
-        
-        error_log("=== END DEBUG FOR COURSE {$course_id} ===");
-    }
+
 }
