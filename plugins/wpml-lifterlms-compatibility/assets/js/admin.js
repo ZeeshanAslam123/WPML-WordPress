@@ -25,6 +25,9 @@
             // Sync translations button
             $('#sync-translations').on('click', this.syncTranslations);
             
+            // Debug relationships button
+            $('#debug-relationships').on('click', this.debugRelationships);
+            
             // Export configuration button
             $('#export-config').on('click', this.exportConfig);
             
@@ -112,6 +115,52 @@
                     WpmlLlmsAdmin.showError(wpmlLlmsAdmin.strings.syncError);
                     $progress.hide();
                     $button.prop('disabled', false).text('Sync Now');
+                }
+            });
+        },
+        
+        /**
+         * Debug course relationships
+         */
+        debugRelationships: function(e) {
+            e.preventDefault();
+            
+            var $button = $(this);
+            var $results = $('#debug-results');
+            var courseId = $('#debug-course-id').val();
+            
+            if (!courseId) {
+                WpmlLlmsAdmin.showError('Please enter a course ID');
+                return;
+            }
+            
+            // Disable button
+            $button.prop('disabled', true).text('Debugging...');
+            $results.hide();
+            
+            // Make AJAX request
+            $.ajax({
+                url: wpmlLlmsAdmin.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'wpml_llms_debug_course',
+                    nonce: wpmlLlmsAdmin.nonce,
+                    course_id: courseId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $results.find('p').html('<strong>' + response.data.message + '</strong>');
+                        $results.show();
+                        WpmlLlmsAdmin.showSuccess('Debug completed! Check your error logs for detailed information.');
+                    } else {
+                        WpmlLlmsAdmin.showError(response.data || 'Debug failed. Please try again.');
+                    }
+                    
+                    $button.prop('disabled', false).text('Debug Course');
+                },
+                error: function() {
+                    WpmlLlmsAdmin.showError('Debug failed. Please try again.');
+                    $button.prop('disabled', false).text('Debug Course');
                 }
             });
         },
@@ -230,4 +279,3 @@
     });
     
 })(jQuery);
-

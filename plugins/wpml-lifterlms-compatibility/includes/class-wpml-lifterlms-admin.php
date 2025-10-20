@@ -31,6 +31,7 @@ class WPML_LifterLMS_Admin {
         
         // Handle AJAX requests
         add_action('wp_ajax_wpml_llms_sync_translations', array($this, 'handle_sync_translations'));
+        add_action('wp_ajax_wpml_llms_debug_course', array($this, 'handle_debug_course'));
         add_action('wp_ajax_wpml_llms_export_config', array($this, 'handle_export_config'));
         add_action('wp_ajax_wpml_llms_import_config', array($this, 'handle_import_config'));
     }
@@ -365,6 +366,18 @@ class WPML_LifterLMS_Admin {
             </div>
             
             <div class="tool-section">
+                <h4><?php _e('Debug Course Relationships', 'wpml-lifterlms-compatibility'); ?></h4>
+                <p><?php _e('Debug relationship issues for a specific course ID.', 'wpml-lifterlms-compatibility'); ?></p>
+                <input type="number" id="debug-course-id" placeholder="<?php _e('Enter Course ID', 'wpml-lifterlms-compatibility'); ?>" style="width: 150px; margin-right: 10px;">
+                <button type="button" class="button" id="debug-relationships">
+                    <?php _e('Debug Course', 'wpml-lifterlms-compatibility'); ?>
+                </button>
+                <div id="debug-results" style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-left: 4px solid #0073aa; display: none;">
+                    <p><strong><?php _e('Debug results will appear here. Check your error logs for detailed information.', 'wpml-lifterlms-compatibility'); ?></strong></p>
+                </div>
+            </div>
+            
+            <div class="tool-section">
                 <h4><?php _e('Configuration Export/Import', 'wpml-lifterlms-compatibility'); ?></h4>
                 <p><?php _e('Export or import compatibility settings.', 'wpml-lifterlms-compatibility'); ?></p>
                 <button type="button" class="button" id="export-config">
@@ -504,6 +517,30 @@ class WPML_LifterLMS_Admin {
         $result = $this->sync_translations();
         
         wp_send_json_success($result);
+    }
+    
+    /**
+     * Handle debug course AJAX
+     */
+    public function handle_debug_course() {
+        check_ajax_referer('wpml_llms_admin', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Insufficient permissions', 'wpml-lifterlms-compatibility'));
+        }
+        
+        $course_id = intval($_POST['course_id']);
+        if (!$course_id) {
+            wp_send_json_error(__('Invalid course ID', 'wpml-lifterlms-compatibility'));
+        }
+        
+        // Get the relationships instance and run debug
+        $relationships = WPML_LifterLMS_Relationships::get_instance();
+        $relationships->debug_course_relationships($course_id);
+        
+        wp_send_json_success(array(
+            'message' => sprintf(__('Debug completed for course ID %d. Check your error logs for detailed information.', 'wpml-lifterlms-compatibility'), $course_id)
+        ));
     }
     
     /**
