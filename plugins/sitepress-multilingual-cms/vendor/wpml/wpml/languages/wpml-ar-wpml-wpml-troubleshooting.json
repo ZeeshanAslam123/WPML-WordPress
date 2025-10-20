@@ -1,0 +1,22 @@
+{
+   "domain": "messages",
+   "locale_data": {
+      "messages": {
+         "": {
+            "domain": "messages"
+         },
+         "PostHog Integration": [
+            "تكامل PostHog"
+         ],
+         "PostHog is running on your site": [
+            "PostHog يعمل على موقعك"
+         ],
+         "Enable PostHog to help us improve our product": [
+            "قم بتمكين PostHog لمساعدتنا في تحسين منتجنا"
+         ],
+         "your PostHog session ID is: ": [
+            "معرف جلسة PostHog الخاص بك هو: "
+         ]
+      }
+   }
+}

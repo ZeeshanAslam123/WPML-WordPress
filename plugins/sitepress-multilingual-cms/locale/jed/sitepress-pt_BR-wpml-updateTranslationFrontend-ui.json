@@ -1,0 +1,19 @@
+{
+   "domain": "messages",
+   "locale_data": {
+      "messages": {
+         "": {
+            "domain": "messages"
+         },
+         "Please wait, applying translation..": [
+            "Aguarde, aplicando tradução..."
+         ],
+         "There was an error in applying translation.": [
+            "Ocorreu um erro ao aplicar a tradução."
+         ],
+         "Someone is already reviewing this translation. Please try again later.": [
+            "Alguém já está revisando esta tradução. Tente novamente mais tarde."
+         ]
+      }
+   }
+}
