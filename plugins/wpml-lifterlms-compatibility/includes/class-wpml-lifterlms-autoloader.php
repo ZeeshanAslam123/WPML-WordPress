@@ -33,15 +33,32 @@ class WPML_LifterLMS_Autoloader {
             return;
         }
         
+        // Debug: Log autoload attempts
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('WPML LifterLMS Autoloader: Attempting to load class: ' . $class_name);
+        }
+        
         // Convert class name to file name
         $file_name = self::get_file_name_from_class($class_name);
         
         // Build file path
         $file_path = WPML_LLMS_PLUGIN_DIR . 'includes/' . $file_name;
         
+        // Debug: Log file path
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('WPML LifterLMS Autoloader: Looking for file: ' . $file_path);
+        }
+        
         // Load the file if it exists
         if (file_exists($file_path)) {
             require_once $file_path;
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('WPML LifterLMS Autoloader: Successfully loaded: ' . $file_path);
+            }
+        } else {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('WPML LifterLMS Autoloader: File not found: ' . $file_path);
+            }
         }
     }
     
@@ -60,4 +77,3 @@ class WPML_LifterLMS_Autoloader {
         return $file_name;
     }
 }
-

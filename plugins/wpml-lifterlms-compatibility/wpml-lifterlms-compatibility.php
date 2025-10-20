@@ -385,9 +385,30 @@ class WPML_LifterLMS_Compatibility {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('WPML LifterLMS: Initializing course fixer');
                 }
-                $this->components['course_fixer'] = WPML_LifterLMS_Course_Fixer::get_instance();
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('WPML LifterLMS: Course fixer initialized successfully');
+                
+                // Manually require the course fixer file to ensure it's loaded
+                $course_fixer_file = WPML_LLMS_PLUGIN_DIR . 'includes/class-wpml-lifterlms-course-fixer.php';
+                if (file_exists($course_fixer_file)) {
+                    require_once $course_fixer_file;
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('WPML LifterLMS: Manually loaded course fixer file');
+                    }
+                } else {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('WPML LifterLMS: Course fixer file not found at: ' . $course_fixer_file);
+                    }
+                }
+                
+                // Check if class exists before instantiating
+                if (class_exists('WPML_LifterLMS_Course_Fixer')) {
+                    $this->components['course_fixer'] = WPML_LifterLMS_Course_Fixer::get_instance();
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('WPML LifterLMS: Course fixer initialized successfully');
+                    }
+                } else {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('WPML LifterLMS: WPML_LifterLMS_Course_Fixer class not found!');
+                    }
                 }
                 
             } catch (Exception $e) {
