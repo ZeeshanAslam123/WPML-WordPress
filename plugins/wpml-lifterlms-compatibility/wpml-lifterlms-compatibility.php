@@ -73,7 +73,13 @@ class WPML_LifterLMS_Compatibility {
      * Initialize hooks
      */
     private function init_hooks() {
+        // Register WPML configuration immediately to prevent XML parsing issues
+        add_action('init', array($this, 'register_wpml_config'), 1);
+        
+        // Initialize plugin
         add_action('plugins_loaded', array($this, 'init'), 0);
+        
+        // Plugin activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
     }
@@ -201,9 +207,6 @@ class WPML_LifterLMS_Compatibility {
         // Only initialize if not already done
         if (!isset($this->components['post_types'])) {
             try {
-                // Register WPML configuration programmatically to prevent XML issues
-                $this->register_wpml_config();
-                
                 $this->components['post_types'] = new WPML_LifterLMS_Post_Types();
                 $this->components['post_types']->init();
                 
@@ -224,20 +227,28 @@ class WPML_LifterLMS_Compatibility {
     /**
      * Register WPML configuration programmatically
      */
-    private function register_wpml_config() {
+    public function register_wpml_config() {
         // Only register if WPML is active
         if (!defined('ICL_SITEPRESS_VERSION')) {
             return;
         }
         
-        // Register post types for translation
-        add_filter('wpml_custom_post_translation_settings', array($this, 'register_post_types_for_translation'));
-        
-        // Register taxonomies for translation
-        add_filter('wpml_custom_taxonomy_translation_settings', array($this, 'register_taxonomies_for_translation'));
-        
-        // Register custom fields for translation
-        add_filter('wpml_custom_field_translation_settings', array($this, 'register_custom_fields_for_translation'));
+        try {
+            // Register post types for translation
+            add_filter('wpml_custom_post_translation_settings', array($this, 'register_post_types_for_translation'), 10, 1);
+            
+            // Register taxonomies for translation
+            add_filter('wpml_custom_taxonomy_translation_settings', array($this, 'register_taxonomies_for_translation'), 10, 1);
+            
+            // Register custom fields for translation
+            add_filter('wpml_custom_field_translation_settings', array($this, 'register_custom_fields_for_translation'), 10, 1);
+            
+        } catch (Exception $e) {
+            // Log error if logger is available
+            if (isset($this->components['logger'])) {
+                $this->components['logger']->error('Failed to register WPML configuration: ' . $e->getMessage());
+            }
+        }
     }
     
     /**
@@ -246,26 +257,34 @@ class WPML_LifterLMS_Compatibility {
      * @return array
      */
     public function register_post_types_for_translation($settings) {
-        $lifterlms_post_types = array(
-            'course' => array('translate' => 1, 'display_as_translated' => 1),
-            'lesson' => array('translate' => 1, 'display_as_translated' => 1),
-            'llms_quiz' => array('translate' => 1, 'display_as_translated' => 1),
-            'llms_question' => array('translate' => 1, 'display_as_translated' => 1),
-            'llms_membership' => array('translate' => 1, 'display_as_translated' => 1),
-            'llms_certificate' => array('translate' => 1, 'display_as_translated' => 1),
-            'llms_achievement' => array('translate' => 1, 'display_as_translated' => 1),
-            'llms_email' => array('translate' => 1, 'display_as_translated' => 1),
-            'llms_access_plan' => array('translate' => 1, 'display_as_translated' => 1),
-            'llms_coupon' => array('translate' => 0, 'display_as_translated' => 0),
-            'llms_voucher' => array('translate' => 0, 'display_as_translated' => 0),
-            'llms_order' => array('translate' => 0, 'display_as_translated' => 0),
-            'llms_transaction' => array('translate' => 0, 'display_as_translated' => 0),
-        );
+        if (!is_array($settings)) {
+            $settings = array();
+        }
         
-        foreach ($lifterlms_post_types as $post_type => $config) {
-            if (post_type_exists($post_type)) {
-                $settings[$post_type] = $config;
+        try {
+            $lifterlms_post_types = array(
+                'course' => array('translate' => 1, 'display_as_translated' => 1),
+                'lesson' => array('translate' => 1, 'display_as_translated' => 1),
+                'llms_quiz' => array('translate' => 1, 'display_as_translated' => 1),
+                'llms_question' => array('translate' => 1, 'display_as_translated' => 1),
+                'llms_membership' => array('translate' => 1, 'display_as_translated' => 1),
+                'llms_certificate' => array('translate' => 1, 'display_as_translated' => 1),
+                'llms_achievement' => array('translate' => 1, 'display_as_translated' => 1),
+                'llms_email' => array('translate' => 1, 'display_as_translated' => 1),
+                'llms_access_plan' => array('translate' => 1, 'display_as_translated' => 1),
+                'llms_coupon' => array('translate' => 0, 'display_as_translated' => 0),
+                'llms_voucher' => array('translate' => 0, 'display_as_translated' => 0),
+                'llms_order' => array('translate' => 0, 'display_as_translated' => 0),
+                'llms_transaction' => array('translate' => 0, 'display_as_translated' => 0),
+            );
+            
+            foreach ($lifterlms_post_types as $post_type => $config) {
+                if (post_type_exists($post_type)) {
+                    $settings[$post_type] = $config;
+                }
             }
+        } catch (Exception $e) {
+            // Silently handle errors to prevent breaking WPML
         }
         
         return $settings;
@@ -277,19 +296,27 @@ class WPML_LifterLMS_Compatibility {
      * @return array
      */
     public function register_taxonomies_for_translation($settings) {
-        $lifterlms_taxonomies = array(
-            'course_cat',
-            'course_tag', 
-            'course_difficulty',
-            'course_track',
-            'membership_cat',
-            'membership_tag'
-        );
+        if (!is_array($settings)) {
+            $settings = array();
+        }
         
-        foreach ($lifterlms_taxonomies as $taxonomy) {
-            if (taxonomy_exists($taxonomy)) {
-                $settings[$taxonomy] = array('translate' => 1);
+        try {
+            $lifterlms_taxonomies = array(
+                'course_cat',
+                'course_tag', 
+                'course_difficulty',
+                'course_track',
+                'membership_cat',
+                'membership_tag'
+            );
+            
+            foreach ($lifterlms_taxonomies as $taxonomy) {
+                if (taxonomy_exists($taxonomy)) {
+                    $settings[$taxonomy] = array('translate' => 1);
+                }
             }
+        } catch (Exception $e) {
+            // Silently handle errors to prevent breaking WPML
         }
         
         return $settings;
@@ -301,34 +328,42 @@ class WPML_LifterLMS_Compatibility {
      * @return array
      */
     public function register_custom_fields_for_translation($settings) {
-        $translatable_fields = array(
-            '_llms_excerpt',
-            '_llms_video_embed',
-            '_llms_audio_embed',
-            '_llms_course_prerequisites_message',
-            '_llms_lesson_prerequisite_message',
-            '_llms_drip_message',
-            '_llms_quiz_description',
-            '_llms_question_description',
-            '_llms_email_subject',
-            '_llms_email_message'
-        );
-        
-        $copy_fields = array(
-            '_llms_course_prerequisites',
-            '_llms_parent_course',
-            '_llms_parent_section',
-            '_llms_points',
-            '_llms_price',
-            '_llms_sale_price'
-        );
-        
-        foreach ($translatable_fields as $field) {
-            $settings[$field] = array('translate' => 1);
+        if (!is_array($settings)) {
+            $settings = array();
         }
         
-        foreach ($copy_fields as $field) {
-            $settings[$field] = array('translate' => 0, 'copy' => 1);
+        try {
+            $translatable_fields = array(
+                '_llms_excerpt',
+                '_llms_video_embed',
+                '_llms_audio_embed',
+                '_llms_course_prerequisites_message',
+                '_llms_lesson_prerequisite_message',
+                '_llms_drip_message',
+                '_llms_quiz_description',
+                '_llms_question_description',
+                '_llms_email_subject',
+                '_llms_email_message'
+            );
+            
+            $copy_fields = array(
+                '_llms_course_prerequisites',
+                '_llms_parent_course',
+                '_llms_parent_section',
+                '_llms_points',
+                '_llms_price',
+                '_llms_sale_price'
+            );
+            
+            foreach ($translatable_fields as $field) {
+                $settings[$field] = array('translate' => 1);
+            }
+            
+            foreach ($copy_fields as $field) {
+                $settings[$field] = array('translate' => 0, 'copy' => 1);
+            }
+        } catch (Exception $e) {
+            // Silently handle errors to prevent breaking WPML
         }
         
         return $settings;
