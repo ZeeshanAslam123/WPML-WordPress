@@ -216,6 +216,9 @@ class WPML_LifterLMS_Compatibility {
                 $this->components['custom_fields'] = new WPML_LifterLMS_Custom_Fields();
                 $this->components['custom_fields']->init();
                 
+                $this->components['relationships'] = new WPML_LifterLMS_Relationships();
+                $this->components['relationships']->init();
+                
             } catch (Exception $e) {
                 if (isset($this->components['logger'])) {
                     $this->components['logger']->error('Failed to initialize core components: ' . $e->getMessage());
@@ -586,6 +589,46 @@ class WPML_LifterLMS_Compatibility {
      */
     public function get_plugin_dir() {
         return WPML_LLMS_PLUGIN_DIR;
+    }
+    
+    /**
+     * Manually sync all existing relationships
+     * This method can be called to fix existing translated content
+     */
+    public function sync_all_relationships() {
+        if (!$this->is_wpml_active() || !$this->is_lifterlms_active()) {
+            return false;
+        }
+        
+        // Get relationships component
+        $relationships = $this->get_component('relationships');
+        if (!$relationships) {
+            return false;
+        }
+        
+        // Get all courses with translations
+        $courses = get_posts(array(
+            'post_type' => 'course',
+            'posts_per_page' => -1,
+            'post_status' => 'publish'
+        ));
+        
+        foreach ($courses as $course) {
+            $translations = apply_filters('wpml_get_element_translations', null, $course->ID, 'post_course');
+            if ($translations && count($translations) > 1) {
+                foreach ($translations as $lang => $translation) {
+                    if ($translation->element_id != $course->ID) {
+                        $relationships->sync_relationships_on_translation(
+                            $translation->element_id, 
+                            array(), 
+                            (object)array('original_doc_id' => $course->ID)
+                        );
+                    }
+                }
+            }
+        }
+        
+        return true;
     }
     
     /**

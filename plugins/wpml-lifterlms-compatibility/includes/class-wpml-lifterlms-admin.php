@@ -542,11 +542,23 @@ class WPML_LifterLMS_Admin {
      * @return array
      */
     private function sync_translations() {
-        // Implementation for syncing translations
-        return array(
-            'message' => __('Translations synced successfully!', 'wpml-lifterlms-compatibility'),
-            'synced_items' => 0
-        );
+        // Get main plugin instance
+        $plugin = WPML_LifterLMS_Compatibility::get_instance();
+        
+        // Sync all relationships
+        $success = $plugin->sync_all_relationships();
+        
+        if ($success) {
+            return array(
+                'message' => __('All LifterLMS relationships synced successfully! Sections, lessons, quizzes, and access plans should now appear in translated courses.', 'wpml-lifterlms-compatibility'),
+                'synced_items' => 1
+            );
+        } else {
+            return array(
+                'message' => __('Failed to sync relationships. Please ensure WPML and LifterLMS are both active.', 'wpml-lifterlms-compatibility'),
+                'synced_items' => 0
+            );
+        }
     }
     
     /**
@@ -576,4 +588,3 @@ class WPML_LifterLMS_Admin {
         );
     }
 }
-
