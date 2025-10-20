@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wpml-config>
+    <!-- LifterLMS Post Types -->
+    <post-types>
+        <!-- Core Content Types - Fully Translatable -->
+        <post-type translate="1" display-as-translated="1">course</post-type>
+        <post-type translate="1" display-as-translated="1">lesson</post-type>
+        <post-type translate="1" display-as-translated="1">llms_quiz</post-type>
+        <post-type translate="1" display-as-translated="1">llms_question</post-type>
+        <post-type translate="1" display-as-translated="1">llms_membership</post-type>
+        <post-type translate="1" display-as-translated="1">llms_certificate</post-type>
+        <post-type translate="1" display-as-translated="1">llms_achievement</post-type>
+        <post-type translate="1" display-as-translated="1">llms_email</post-type>
+        <post-type translate="1" display-as-translated="1">llms_access_plan</post-type>
+        <post-type translate="1" display-as-translated="1">llms_engagement</post-type>
+        <post-type translate="1" display-as-translated="1">llms_form</post-type>
+        
+        <!-- Structural Types - Duplicate Only -->
+        <post-type translate="0" display-as-translated="0">section</post-type>
+        
+        <!-- E-commerce Types - Duplicate with Shared Data -->
+        <post-type translate="0" display-as-translated="1">llms_coupon</post-type>
+        <post-type translate="0" display-as-translated="1">llms_voucher</post-type>
+        
+        <!-- System Types - Do Not Translate -->
+        <post-type translate="0" display-as-translated="0">llms_order</post-type>
+        <post-type translate="0" display-as-translated="0">llms_transaction</post-type>
+        <post-type translate="0" display-as-translated="0">llms_my_certificate</post-type>
+    </post-types>
+    
+    <!-- LifterLMS Taxonomies -->
+    <taxonomies>
+        <!-- Course Taxonomies -->
+        <taxonomy translate="1">course_cat</taxonomy>
+        <taxonomy translate="1">course_tag</taxonomy>
+        <taxonomy translate="1">course_difficulty</taxonomy>
+        <taxonomy translate="1">course_track</taxonomy>
+        
+        <!-- Membership Taxonomies -->
+        <taxonomy translate="1">membership_cat</taxonomy>
+        <taxonomy translate="1">membership_tag</taxonomy>
+    </taxonomies>
+    
+    <!-- Custom Fields Configuration -->
+    <custom-fields>
+        <!-- Course Fields - Translatable -->
+        <custom-field translate="1">_llms_excerpt</custom-field>
+        <custom-field translate="1">_llms_video_embed</custom-field>
+        <custom-field translate="1">_llms_audio_embed</custom-field>
+        <custom-field translate="1">_llms_course_outline</custom-field>
+        <custom-field translate="1">_llms_course_prerequisites_message</custom-field>
+        <custom-field translate="1">_llms_course_capacity_message</custom-field>
+        <custom-field translate="1">_llms_sales_page_content_type</custom-field>
+        <custom-field translate="1">_llms_sales_page_content_url</custom-field>
+        <custom-field translate="1">_llms_sales_page_content_page_id</custom-field>
+        
+        <!-- Course Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_length</custom-field>
+        <custom-field translate="0" copy="1">_llms_difficulty</custom-field>
+        <custom-field translate="0" copy="1">_llms_track</custom-field>
+        <custom-field translate="0" copy="1">_llms_course_prerequisites</custom-field>
+        <custom-field translate="0" copy="1">_llms_course_capacity</custom-field>
+        <custom-field translate="0" copy="1">_llms_enable_capacity</custom-field>
+        <custom-field translate="0" copy="1">_llms_start_date</custom-field>
+        <custom-field translate="0" copy="1">_llms_end_date</custom-field>
+        <custom-field translate="0" copy="1">_llms_time_period</custom-field>
+        
+        <!-- Course Fields - Ignore -->
+        <custom-field translate="0">_llms_order</custom-field>
+        <custom-field translate="0">_llms_lessons</custom-field>
+        <custom-field translate="0">_llms_sections</custom-field>
+        <custom-field translate="0">_llms_course_image</custom-field>
+        <custom-field translate="0">_llms_course_video</custom-field>
+        <custom-field translate="0">_llms_course_audio</custom-field>
+        
+        <!-- Lesson Fields - Translatable -->
+        <custom-field translate="1">_llms_lesson_prerequisite_message</custom-field>
+        <custom-field translate="1">_llms_drip_message</custom-field>
+        
+        <!-- Lesson Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_parent_course</custom-field>
+        <custom-field translate="0" copy="1">_llms_parent_section</custom-field>
+        <custom-field translate="0" copy="1">_llms_lesson_prerequisite</custom-field>
+        <custom-field translate="0" copy="1">_llms_require_passing_grade</custom-field>
+        <custom-field translate="0" copy="1">_llms_require_assignment_passing_grade</custom-field>
+        <custom-field translate="0" copy="1">_llms_points</custom-field>
+        <custom-field translate="0" copy="1">_llms_drip_method</custom-field>
+        <custom-field translate="0" copy="1">_llms_drip_days</custom-field>
+        <custom-field translate="0" copy="1">_llms_drip_date</custom-field>
+        <custom-field translate="0" copy="1">_llms_drip_time</custom-field>
+        
+        <!-- Lesson Fields - Ignore -->
+        <custom-field translate="0">_llms_quiz</custom-field>
+        <custom-field translate="0">_llms_assignment</custom-field>
+        
+        <!-- Quiz Fields - Translatable -->
+        <custom-field translate="1">_llms_quiz_description</custom-field>
+        <custom-field translate="1">_llms_quiz_success_message</custom-field>
+        <custom-field translate="1">_llms_quiz_failure_message</custom-field>
+        
+        <!-- Quiz Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_attempts_allowed</custom-field>
+        <custom-field translate="0" copy="1">_llms_limit_attempts</custom-field>
+        <custom-field translate="0" copy="1">_llms_time_limit</custom-field>
+        <custom-field translate="0" copy="1">_llms_limit_time</custom-field>
+        <custom-field translate="0" copy="1">_llms_passing_percent</custom-field>
+        <custom-field translate="0" copy="1">_llms_show_correct_answer</custom-field>
+        <custom-field translate="0" copy="1">_llms_random_questions</custom-field>
+        <custom-field translate="0" copy="1">_llms_show_results</custom-field>
+        <custom-field translate="0" copy="1">_llms_show_points</custom-field>
+        
+        <!-- Quiz Fields - Ignore -->
+        <custom-field translate="0">_llms_questions</custom-field>
+        <custom-field translate="0">_llms_quiz_lesson</custom-field>
+        
+        <!-- Question Fields - Translatable -->
+        <custom-field translate="1">_llms_question_description</custom-field>
+        <custom-field translate="1">_llms_question_explanation</custom-field>
+        <custom-field translate="1">_llms_choices</custom-field>
+        <custom-field translate="1">_llms_correct_answer</custom-field>
+        
+        <!-- Question Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_question_type</custom-field>
+        <custom-field translate="0" copy="1">_llms_points</custom-field>
+        <custom-field translate="0" copy="1">_llms_question_order</custom-field>
+        
+        <!-- Question Fields - Ignore -->
+        <custom-field translate="0">_llms_parent_quiz</custom-field>
+        
+        <!-- Membership Fields - Translatable -->
+        <custom-field translate="1">_llms_membership_redirect_page_id</custom-field>
+        <custom-field translate="1">_llms_restriction_redirect_type</custom-field>
+        <custom-field translate="1">_llms_restriction_redirect_url</custom-field>
+        <custom-field translate="1">_llms_restriction_redirect_page_id</custom-field>
+        
+        <!-- Membership Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_restriction_add_notice</custom-field>
+        <custom-field translate="0" copy="1">_llms_restriction_notice</custom-field>
+        <custom-field translate="0" copy="1">_llms_auto_enroll</custom-field>
+        <custom-field translate="0" copy="1">_llms_membership_redirect_forced</custom-field>
+        
+        <!-- Membership Fields - Ignore -->
+        <custom-field translate="0">_llms_instructors</custom-field>
+        <custom-field translate="0">_llms_product_courses</custom-field>
+        
+        <!-- Certificate Fields - Translatable -->
+        <custom-field translate="1">_llms_certificate_title</custom-field>
+        <custom-field translate="1">_llms_certificate_content</custom-field>
+        <custom-field translate="1">_llms_certificate_background</custom-field>
+        
+        <!-- Certificate Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_certificate_sequential_id</custom-field>
+        <custom-field translate="0" copy="1">_llms_certificate_template_id</custom-field>
+        
+        <!-- Achievement Fields - Translatable -->
+        <custom-field translate="1">_llms_achievement_title</custom-field>
+        <custom-field translate="1">_llms_achievement_content</custom-field>
+        <custom-field translate="1">_llms_achievement_image</custom-field>
+        
+        <!-- Achievement Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_achievement_template_id</custom-field>
+        
+        <!-- Email Fields - Translatable -->
+        <custom-field translate="1">_llms_email_subject</custom-field>
+        <custom-field translate="1">_llms_email_heading</custom-field>
+        <custom-field translate="1">_llms_email_message</custom-field>
+        
+        <!-- Email Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_email_type</custom-field>
+        <custom-field translate="0" copy="1">_llms_email_trigger_event</custom-field>
+        
+        <!-- Access Plan Fields - Translatable -->
+        <custom-field translate="1">_llms_access_plan_title</custom-field>
+        <custom-field translate="1">_llms_access_plan_description</custom-field>
+        <custom-field translate="1">_llms_checkout_redirect_type</custom-field>
+        <custom-field translate="1">_llms_checkout_redirect_url</custom-field>
+        <custom-field translate="1">_llms_checkout_redirect_page_id</custom-field>
+        
+        <!-- Access Plan Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_access_expiration</custom-field>
+        <custom-field translate="0" copy="1">_llms_access_expires</custom-field>
+        <custom-field translate="0" copy="1">_llms_access_length</custom-field>
+        <custom-field translate="0" copy="1">_llms_access_period</custom-field>
+        <custom-field translate="0" copy="1">_llms_billing_cycle_number</custom-field>
+        <custom-field translate="0" copy="1">_llms_billing_frequency</custom-field>
+        <custom-field translate="0" copy="1">_llms_billing_period</custom-field>
+        <custom-field translate="0" copy="1">_llms_price</custom-field>
+        <custom-field translate="0" copy="1">_llms_sale_price</custom-field>
+        <custom-field translate="0" copy="1">_llms_sale_price_dates_from</custom-field>
+        <custom-field translate="0" copy="1">_llms_sale_price_dates_to</custom-field>
+        <custom-field translate="0" copy="1">_llms_trial_offer</custom-field>
+        <custom-field translate="0" copy="1">_llms_trial_length</custom-field>
+        <custom-field translate="0" copy="1">_llms_trial_period</custom-field>
+        <custom-field translate="0" copy="1">_llms_trial_price</custom-field>
+        <custom-field translate="0" copy="1">_llms_availability</custom-field>
+        <custom-field translate="0" copy="1">_llms_availability_restrictions</custom-field>
+        <custom-field translate="0" copy="1">_llms_enroll_text</custom-field>
+        <custom-field translate="0" copy="1">_llms_featured</custom-field>
+        
+        <!-- Access Plan Fields - Ignore -->
+        <custom-field translate="0">_llms_product_id</custom-field>
+        <custom-field translate="0">_llms_order</custom-field>
+        
+        <!-- Coupon Fields - Translatable -->
+        <custom-field translate="1">_llms_description</custom-field>
+        <custom-field translate="1">_llms_usage_limit_message</custom-field>
+        
+        <!-- Coupon Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_coupon_amount</custom-field>
+        <custom-field translate="0" copy="1">_llms_discount_type</custom-field>
+        <custom-field translate="0" copy="1">_llms_expiration_date</custom-field>
+        <custom-field translate="0" copy="1">_llms_usage_limit</custom-field>
+        <custom-field translate="0" copy="1">_llms_enable_usage_limit</custom-field>
+        
+        <!-- Coupon Fields - Ignore -->
+        <custom-field translate="0">_llms_usage_count</custom-field>
+        <custom-field translate="0">_llms_product_restrictions</custom-field>
+        
+        <!-- Voucher Fields - Translatable -->
+        <custom-field translate="1">_llms_voucher_title</custom-field>
+        <custom-field translate="1">_llms_voucher_description</custom-field>
+        
+        <!-- Voucher Fields - Copy/Sync -->
+        <custom-field translate="0" copy="1">_llms_voucher_codes</custom-field>
+        <custom-field translate="0" copy="1">_llms_voucher_redemption_count</custom-field>
+    </custom-fields>
+    
+    <!-- Admin Texts -->
+    <admin-texts>
+        <!-- LifterLMS Admin Menu Items -->
+        <key name="LifterLMS">
+            <key name="courses">Courses</key>
+            <key name="lessons">Lessons</key>
+            <key name="quizzes">Quizzes</key>
+            <key name="memberships">Memberships</key>
+            <key name="certificates">Certificates</key>
+            <key name="achievements">Achievements</key>
+            <key name="emails">Emails</key>
+            <key name="coupons">Coupons</key>
+            <key name="vouchers">Vouchers</key>
+            <key name="orders">Orders</key>
+            <key name="students">Students</key>
+            <key name="reporting">Reporting</key>
+            <key name="settings">Settings</key>
+        </key>
+        
+        <!-- LifterLMS Labels -->
+        <key name="LifterLMS Labels">
+            <key name="course_catalog">Course Catalog</key>
+            <key name="my_courses">My Courses</key>
+            <key name="my_memberships">My Memberships</key>
+            <key name="my_achievements">My Achievements</key>
+            <key name="my_certificates">My Certificates</key>
+            <key name="student_dashboard">Student Dashboard</key>
+            <key name="checkout">Checkout</key>
+            <key name="order_history">Order History</key>
+            <key name="edit_account">Edit Account</key>
+            <key name="redeem_voucher">Redeem Voucher</key>
+        </key>
+        
+        <!-- LifterLMS Messages -->
+        <key name="LifterLMS Messages">
+            <key name="enrollment_success">You have been successfully enrolled!</key>
+            <key name="course_complete">Congratulations! You have completed this course.</key>
+            <key name="lesson_complete">Lesson completed successfully!</key>
+            <key name="quiz_passed">Congratulations! You passed the quiz.</key>
+            <key name="quiz_failed">You did not pass the quiz. Please try again.</key>
+            <key name="certificate_earned">You have earned a certificate!</key>
+            <key name="achievement_earned">You have earned an achievement!</key>
+            <key name="access_denied">You do not have access to this content.</key>
+            <key name="login_required">Please log in to access this content.</key>
+            <key name="enrollment_required">Please enroll in this course to access this content.</key>
+        </key>
+    </admin-texts>
+    
+    <!-- Language Configuration -->
+    <language-switcher-settings>
+        <!-- Show language switcher on LifterLMS pages -->
+        <key name="display_on_lifterlms_pages">1</key>
+        <key name="display_on_course_pages">1</key>
+        <key name="display_on_lesson_pages">1</key>
+        <key name="display_on_quiz_pages">1</key>
+        <key name="display_on_membership_pages">1</key>
+        <key name="display_on_student_dashboard">1</key>
+        <key name="display_on_checkout_pages">1</key>
+    </language-switcher-settings>
+</wpml-config>
+
