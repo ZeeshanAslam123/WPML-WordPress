@@ -38,15 +38,8 @@ class WPML_LifterLMS_Relationships {
         // Handle relationship updates when content is saved
         add_action('save_post', array($this, 'sync_relationships_on_save'), 20, 3);
         
-        // Handle frontend queries to show correct translated relationships
-        add_filter('llms_get_course_sections', array($this, 'filter_course_sections'), 10, 2);
-        add_filter('llms_get_section_lessons', array($this, 'filter_section_lessons'), 10, 2);
-        add_filter('llms_get_lesson_quiz', array($this, 'filter_lesson_quiz'), 10, 2);
-        add_filter('llms_get_course_access_plans', array($this, 'filter_course_access_plans'), 10, 2);
-        
-        // Handle LifterLMS queries
-        add_filter('posts_where', array($this, 'filter_posts_where'), 10, 2);
-        add_filter('posts_join', array($this, 'filter_posts_join'), 10, 2);
+        // Note: We don't need frontend filtering hooks because LifterLMS uses WP_Query with meta_query
+        // WPML automatically handles language filtering for WP_Query when relationships are properly synced
     }
     
     /**
@@ -160,25 +153,35 @@ class WPML_LifterLMS_Relationships {
      * @param int $translated_course_id
      */
     private function sync_course_relationships($original_course_id, $translated_course_id) {
-        // Get original course sections
-        $original_sections = get_post_meta($original_course_id, '_llms_sections', true);
+        // Debug logging
+        error_log("WPML-LifterLMS: Syncing course relationships - Original: {$original_course_id}, Translated: {$translated_course_id}");
         
-        if (!empty($original_sections)) {
-            $translated_sections = array();
-            
-            foreach ($original_sections as $section_id) {
-                $translated_section_id = apply_filters('wpml_object_id', $section_id, 'section', false, $this->get_post_language($translated_course_id));
-                if ($translated_section_id) {
-                    $translated_sections[] = $translated_section_id;
-                    
-                    // Update section's parent course
-                    update_post_meta($translated_section_id, '_llms_parent_course', $translated_course_id);
-                }
-            }
-            
-            // Update translated course sections
-            if (!empty($translated_sections)) {
-                update_post_meta($translated_course_id, '_llms_sections', $translated_sections);
+        // Get original course sections using LifterLMS method
+        $original_sections = get_posts(array(
+            'post_type' => 'section',
+            'meta_key' => '_llms_parent_course',
+            'meta_value' => $original_course_id,
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            'orderby' => 'meta_value_num',
+            'meta_key' => '_llms_order',
+            'order' => 'ASC'
+        ));
+        
+        error_log("WPML-LifterLMS: Found " . count($original_sections) . " sections for course {$original_course_id}");
+        
+        foreach ($original_sections as $section) {
+            $translated_section_id = apply_filters('wpml_object_id', $section->ID, 'section', false, $this->get_post_language($translated_course_id));
+            if ($translated_section_id) {
+                error_log("WPML-LifterLMS: Syncing section {$section->ID} -> {$translated_section_id}");
+                
+                // Update section's parent course to point to translated course
+                update_post_meta($translated_section_id, '_llms_parent_course', $translated_course_id);
+                
+                // Also sync the section's lessons
+                $this->sync_section_relationships($section->ID, $translated_section_id);
+            } else {
+                error_log("WPML-LifterLMS: No translated section found for {$section->ID}");
             }
         }
         
@@ -206,29 +209,36 @@ class WPML_LifterLMS_Relationships {
      * @param int $translated_section_id
      */
     private function sync_section_relationships($original_section_id, $translated_section_id) {
-        // Get original section lessons
-        $original_lessons = get_post_meta($original_section_id, '_llms_lessons', true);
+        // Get original section lessons using LifterLMS method
+        $original_lessons = get_posts(array(
+            'post_type' => 'lesson',
+            'meta_key' => '_llms_parent_section',
+            'meta_value' => $original_section_id,
+            'posts_per_page' => -1,
+            'post_status' => 'publish',
+            'orderby' => 'meta_value_num',
+            'meta_key' => '_llms_order',
+            'order' => 'ASC'
+        ));
         
-        if (!empty($original_lessons)) {
-            $translated_lessons = array();
-            
-            foreach ($original_lessons as $lesson_id) {
-                $translated_lesson_id = apply_filters('wpml_object_id', $lesson_id, 'lesson', false, $this->get_post_language($translated_section_id));
-                if ($translated_lesson_id) {
-                    $translated_lessons[] = $translated_lesson_id;
-                    
-                    // Update lesson's parent section
-                    update_post_meta($translated_lesson_id, '_llms_parent_section', $translated_section_id);
+        foreach ($original_lessons as $lesson) {
+            $translated_lesson_id = apply_filters('wpml_object_id', $lesson->ID, 'lesson', false, $this->get_post_language($translated_section_id));
+            if ($translated_lesson_id) {
+                // Update lesson's parent section to point to translated section
+                update_post_meta($translated_lesson_id, '_llms_parent_section', $translated_section_id);
+                
+                // Also update lesson's parent course
+                $translated_parent_course = get_post_meta($translated_section_id, '_llms_parent_course', true);
+                if ($translated_parent_course) {
+                    update_post_meta($translated_lesson_id, '_llms_parent_course', $translated_parent_course);
                 }
-            }
-            
-            // Update translated section lessons
-            if (!empty($translated_lessons)) {
-                update_post_meta($translated_section_id, '_llms_lessons', $translated_lessons);
+                
+                // Also sync the lesson's quiz
+                $this->sync_lesson_relationships($lesson->ID, $translated_lesson_id);
             }
         }
         
-        // Sync parent course
+        // Sync parent course (this should already be set, but ensure it's correct)
         $original_parent_course = get_post_meta($original_section_id, '_llms_parent_course', true);
         if ($original_parent_course) {
             $translated_parent_course = apply_filters('wpml_object_id', $original_parent_course, 'course', false, $this->get_post_language($translated_section_id));
@@ -245,7 +255,7 @@ class WPML_LifterLMS_Relationships {
      * @param int $translated_lesson_id
      */
     private function sync_lesson_relationships($original_lesson_id, $translated_lesson_id) {
-        // Sync parent section
+        // Sync parent section (should already be set, but ensure it's correct)
         $original_parent_section = get_post_meta($original_lesson_id, '_llms_parent_section', true);
         if ($original_parent_section) {
             $translated_parent_section = apply_filters('wpml_object_id', $original_parent_section, 'section', false, $this->get_post_language($translated_lesson_id));
@@ -254,7 +264,7 @@ class WPML_LifterLMS_Relationships {
             }
         }
         
-        // Sync parent course
+        // Sync parent course (should already be set, but ensure it's correct)
         $original_parent_course = get_post_meta($original_lesson_id, '_llms_parent_course', true);
         if ($original_parent_course) {
             $translated_parent_course = apply_filters('wpml_object_id', $original_parent_course, 'course', false, $this->get_post_language($translated_lesson_id));
@@ -263,13 +273,30 @@ class WPML_LifterLMS_Relationships {
             }
         }
         
-        // Sync quiz
+        // Sync quiz - check if lesson has a quiz
         $original_quiz = get_post_meta($original_lesson_id, '_llms_quiz', true);
         if ($original_quiz) {
             $translated_quiz = apply_filters('wpml_object_id', $original_quiz, 'llms_quiz', false, $this->get_post_language($translated_lesson_id));
             if ($translated_quiz) {
                 update_post_meta($translated_lesson_id, '_llms_quiz', $translated_quiz);
                 update_post_meta($translated_quiz, '_llms_parent_lesson', $translated_lesson_id);
+            }
+        }
+        
+        // Also check for quizzes that point to this lesson as parent
+        $original_quizzes = get_posts(array(
+            'post_type' => 'llms_quiz',
+            'meta_key' => '_llms_parent_lesson',
+            'meta_value' => $original_lesson_id,
+            'posts_per_page' => -1,
+            'post_status' => 'publish'
+        ));
+        
+        foreach ($original_quizzes as $quiz) {
+            $translated_quiz_id = apply_filters('wpml_object_id', $quiz->ID, 'llms_quiz', false, $this->get_post_language($translated_lesson_id));
+            if ($translated_quiz_id) {
+                update_post_meta($translated_quiz_id, '_llms_parent_lesson', $translated_lesson_id);
+                update_post_meta($translated_lesson_id, '_llms_quiz', $translated_quiz_id);
             }
         }
     }
@@ -310,150 +337,8 @@ class WPML_LifterLMS_Relationships {
         }
     }
     
-    /**
-     * Filter course sections to show translated versions
-     * 
-     * @param array $sections
-     * @param int $course_id
-     * @return array
-     */
-    public function filter_course_sections($sections, $course_id) {
-        if (!$this->is_wpml_active() || !$sections) {
-            return $sections;
-        }
-        
-        $current_lang = apply_filters('wpml_current_language', null);
-        $translated_sections = array();
-        
-        foreach ($sections as $section) {
-            $translated_section_id = apply_filters('wpml_object_id', $section->ID, 'section', false, $current_lang);
-            if ($translated_section_id) {
-                $translated_sections[] = get_post($translated_section_id);
-            }
-        }
-        
-        return $translated_sections;
-    }
-    
-    /**
-     * Filter section lessons to show translated versions
-     * 
-     * @param array $lessons
-     * @param int $section_id
-     * @return array
-     */
-    public function filter_section_lessons($lessons, $section_id) {
-        if (!$this->is_wpml_active() || !$lessons) {
-            return $lessons;
-        }
-        
-        $current_lang = apply_filters('wpml_current_language', null);
-        $translated_lessons = array();
-        
-        foreach ($lessons as $lesson) {
-            $translated_lesson_id = apply_filters('wpml_object_id', $lesson->ID, 'lesson', false, $current_lang);
-            if ($translated_lesson_id) {
-                $translated_lessons[] = get_post($translated_lesson_id);
-            }
-        }
-        
-        return $translated_lessons;
-    }
-    
-    /**
-     * Filter lesson quiz to show translated version
-     * 
-     * @param object $quiz
-     * @param int $lesson_id
-     * @return object
-     */
-    public function filter_lesson_quiz($quiz, $lesson_id) {
-        if (!$this->is_wpml_active() || !$quiz) {
-            return $quiz;
-        }
-        
-        $current_lang = apply_filters('wpml_current_language', null);
-        $translated_quiz_id = apply_filters('wpml_object_id', $quiz->ID, 'llms_quiz', false, $current_lang);
-        
-        if ($translated_quiz_id && $translated_quiz_id != $quiz->ID) {
-            return get_post($translated_quiz_id);
-        }
-        
-        return $quiz;
-    }
-    
-    /**
-     * Filter course access plans to show translated versions
-     * 
-     * @param array $plans
-     * @param int $course_id
-     * @return array
-     */
-    public function filter_course_access_plans($plans, $course_id) {
-        if (!$this->is_wpml_active() || !$plans) {
-            return $plans;
-        }
-        
-        $current_lang = apply_filters('wpml_current_language', null);
-        $translated_plans = array();
-        
-        foreach ($plans as $plan) {
-            $translated_plan_id = apply_filters('wpml_object_id', $plan->ID, 'llms_access_plan', false, $current_lang);
-            if ($translated_plan_id) {
-                $translated_plans[] = get_post($translated_plan_id);
-            }
-        }
-        
-        return $translated_plans;
-    }
-    
-    /**
-     * Filter posts WHERE clause for LifterLMS queries
-     * 
-     * @param string $where
-     * @param WP_Query $query
-     * @return string
-     */
-    public function filter_posts_where($where, $query) {
-        if (!$this->is_wpml_active() || is_admin()) {
-            return $where;
-        }
-        
-        // Only filter LifterLMS post types
-        $post_type = $query->get('post_type');
-        $lifterlms_types = array('course', 'lesson', 'section', 'llms_quiz', 'llms_access_plan');
-        
-        if (!in_array($post_type, $lifterlms_types)) {
-            return $where;
-        }
-        
-        // Let WPML handle the language filtering
-        return $where;
-    }
-    
-    /**
-     * Filter posts JOIN clause for LifterLMS queries
-     * 
-     * @param string $join
-     * @param WP_Query $query
-     * @return string
-     */
-    public function filter_posts_join($join, $query) {
-        if (!$this->is_wpml_active() || is_admin()) {
-            return $join;
-        }
-        
-        // Only filter LifterLMS post types
-        $post_type = $query->get('post_type');
-        $lifterlms_types = array('course', 'lesson', 'section', 'llms_quiz', 'llms_access_plan');
-        
-        if (!in_array($post_type, $lifterlms_types)) {
-            return $join;
-        }
-        
-        // Let WPML handle the language filtering
-        return $join;
-    }
+    // Frontend filtering methods removed - not needed since LifterLMS uses WP_Query with meta_query
+    // and WPML automatically handles language filtering for properly synced relationships
     
     /**
      * Get post language
