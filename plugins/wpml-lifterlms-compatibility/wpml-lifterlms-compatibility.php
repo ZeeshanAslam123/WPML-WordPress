@@ -381,6 +381,14 @@ class WPML_LifterLMS_Compatibility {
                 $this->components['admin'] = new WPML_LifterLMS_Admin();
                 $this->components['admin']->init();
                 
+                // Add admin menu directly in main plugin file to ensure it loads 100%
+                add_action('admin_menu', array($this, 'add_course_fixer_menu'));
+                
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    echo '<pre>MAIN PLUGIN: Added admin_menu hook directly in main plugin file</pre>';
+                    var_dump('admin_menu hook registered in main plugin file');
+                }
+                
                 // Initialize course fixer
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     echo '<pre>WPML LifterLMS: Initializing course fixer</pre>';
@@ -421,6 +429,86 @@ class WPML_LifterLMS_Compatibility {
                     $this->components['logger']->error('Failed to initialize admin components: ' . $e->getMessage());
                 }
             }
+        }
+    }
+    
+    /**
+     * Add course fixer admin menu (moved to main plugin file for 100% loading)
+     */
+    public function add_course_fixer_menu() {
+        // Debug: Show that this method is being called
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            echo '<pre>MAIN PLUGIN: add_course_fixer_menu() method called</pre>';
+            var_dump('Menu creation method called from main plugin file');
+        }
+        
+        $hook = add_menu_page(
+            __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
+            __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
+            'manage_options',
+            'wpml-lifterlms-course-fixer',
+            array($this, 'render_course_fixer_page'),
+            'dashicons-admin-tools',
+            30
+        );
+        
+        // Debug: Show the hook result
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            echo '<pre>MAIN PLUGIN: Menu hook created successfully</pre>';
+            var_dump('Menu hook result', $hook);
+        }
+        
+        // Enqueue assets for this page
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_course_fixer_assets'));
+    }
+    
+    /**
+     * Render course fixer admin page (moved to main plugin file)
+     */
+    public function render_course_fixer_page() {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            echo '<pre>MAIN PLUGIN: render_course_fixer_page() called</pre>';
+            var_dump('Page rendering method called');
+        }
+        
+        // If course fixer component exists, delegate to it
+        if (isset($this->components['course_fixer'])) {
+            $this->components['course_fixer']->render_admin_page();
+            return;
+        }
+        
+        // Fallback: render basic page
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html__('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'); ?></h1>
+            <div class="notice notice-success">
+                <p><strong><?php echo esc_html__('SUCCESS: Admin menu is working!', 'wpml-lifterlms-compatibility'); ?></strong></p>
+                <p><?php echo esc_html__('The admin menu hook is now firing correctly from the main plugin file.', 'wpml-lifterlms-compatibility'); ?></p>
+            </div>
+            <div class="notice notice-info">
+                <p><?php echo esc_html__('Course fixer component is loading...', 'wpml-lifterlms-compatibility'); ?></p>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Enqueue course fixer assets (moved to main plugin file)
+     */
+    public function enqueue_course_fixer_assets($hook) {
+        // Only load on our admin page
+        if ($hook !== 'toplevel_page_wpml-lifterlms-course-fixer') {
+            return;
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            echo '<pre>MAIN PLUGIN: enqueue_course_fixer_assets() called</pre>';
+            var_dump('Assets enqueuing method called for hook', $hook);
+        }
+        
+        // If course fixer component exists, delegate to it
+        if (isset($this->components['course_fixer'])) {
+            $this->components['course_fixer']->enqueue_admin_assets($hook);
         }
     }
     
