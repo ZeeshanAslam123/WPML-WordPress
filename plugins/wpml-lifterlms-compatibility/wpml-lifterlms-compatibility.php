@@ -182,6 +182,41 @@ class WPML_LifterLMS_Compatibility {
                             }
                             ?>
                         </select>
+                        
+                        <!-- DEBUG INFORMATION -->
+                        <?php if (defined('WP_DEBUG') && WP_DEBUG): ?>
+                        <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; font-size: 12px;">
+                            <strong>🐛 Debug Info:</strong><br>
+                            <?php
+                            // Show debug information
+                            echo 'LifterLMS Active: ' . (function_exists('llms_get_posts') ? '✅ YES' : '❌ NO') . '<br>';
+                            echo 'WPML Active: ' . (function_exists('icl_get_languages') ? '✅ YES' : '❌ NO') . '<br>';
+                            
+                            // Check course post type
+                            $post_types = get_post_types();
+                            echo 'Course Post Type Registered: ' . (in_array('course', $post_types) ? '✅ YES' : '❌ NO') . '<br>';
+                            
+                            // Count all courses
+                            $all_courses = get_posts(array('post_type' => 'course', 'post_status' => 'any', 'numberposts' => -1));
+                            echo 'Total Courses in DB: ' . count($all_courses) . '<br>';
+                            
+                            // Count published courses
+                            $published_courses = get_posts(array('post_type' => 'course', 'post_status' => 'publish', 'numberposts' => -1));
+                            echo 'Published Courses: ' . count($published_courses) . '<br>';
+                            
+                            echo 'English Courses Found: ' . count($english_courses) . '<br>';
+                            
+                            // Show first few courses for debugging
+                            if (!empty($all_courses)) {
+                                echo '<strong>Sample Courses:</strong><br>';
+                                foreach (array_slice($all_courses, 0, 3) as $course) {
+                                    $lang = function_exists('icl_get_languages') ? apply_filters('wpml_post_language_details', null, $course->ID) : null;
+                                    echo '- ' . $course->post_title . ' (ID: ' . $course->ID . ', Status: ' . $course->post_status . ', Lang: ' . ($lang ? $lang['language_code'] : 'N/A') . ')<br>';
+                                }
+                            }
+                            ?>
+                        </div>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="control-group" style="margin-bottom: 15px;">
@@ -686,42 +721,69 @@ class WPML_LifterLMS_Compatibility {
      * Get English courses directly (not via AJAX) to avoid LifterLMS compatibility issues
      */
     public function get_english_courses_direct() {
+        $debug_info = array();
+        
         // Check if LifterLMS is active
         if (!function_exists('llms_get_posts')) {
+            $debug_info[] = 'LifterLMS not active - llms_get_posts function not found';
+            error_log('WPML-LifterLMS Debug: ' . implode(' | ', $debug_info));
             return array();
         }
         
-        // Get English courses using LifterLMS functions directly
-        $courses = get_posts(array(
+        $debug_info[] = 'LifterLMS is active';
+        
+        // First, let's try to get ALL courses without any filtering
+        $all_courses = get_posts(array(
             'post_type' => 'course',
             'post_status' => 'publish',
-            'numberposts' => -1,
-            'meta_query' => array(
-                array(
-                    'key' => 'wpml_language',
-                    'value' => 'en',
-                    'compare' => '='
-                )
-            )
+            'numberposts' => -1
         ));
         
-        // If no WPML language meta, get all courses and filter by WPML
-        if (empty($courses) && function_exists('icl_get_languages')) {
-            $courses = get_posts(array(
+        $debug_info[] = 'Total courses found: ' . count($all_courses);
+        
+        if (empty($all_courses)) {
+            // No courses at all - let's check if the post type exists
+            $post_types = get_post_types();
+            $debug_info[] = 'Course post type exists: ' . (in_array('course', $post_types) ? 'YES' : 'NO');
+            
+            // Let's also check for any LifterLMS courses with different status
+            $all_courses_any_status = get_posts(array(
                 'post_type' => 'course',
-                'post_status' => 'publish',
+                'post_status' => 'any',
                 'numberposts' => -1
             ));
+            $debug_info[] = 'Courses with any status: ' . count($all_courses_any_status);
             
-            // Filter for English courses using WPML
+            error_log('WPML-LifterLMS Debug: ' . implode(' | ', $debug_info));
+            return array();
+        }
+        
+        // Log details about found courses
+        foreach ($all_courses as $course) {
+            $debug_info[] = 'Course: ' . $course->post_title . ' (ID: ' . $course->ID . ', Status: ' . $course->post_status . ')';
+        }
+        
+        // Now let's check WPML integration
+        $wpml_active = function_exists('icl_get_languages');
+        $debug_info[] = 'WPML active: ' . ($wpml_active ? 'YES' : 'NO');
+        
+        if ($wpml_active) {
+            // Check language details for each course
             $english_courses = array();
-            foreach ($courses as $course) {
+            foreach ($all_courses as $course) {
                 $lang = apply_filters('wpml_post_language_details', null, $course->ID);
+                $debug_info[] = 'Course ' . $course->ID . ' language: ' . ($lang ? $lang['language_code'] : 'UNKNOWN');
+                
                 if ($lang && $lang['language_code'] === 'en') {
                     $english_courses[] = $course;
                 }
             }
             $courses = $english_courses;
+            $debug_info[] = 'English courses after WPML filtering: ' . count($courses);
+        } else {
+            // No WPML, return all courses
+            $courses = $all_courses;
+            $debug_info[] = 'No WPML - returning all courses';
         }
         
         // Format courses for dropdown
@@ -732,6 +794,9 @@ class WPML_LifterLMS_Compatibility {
                 'title' => $course->post_title . ' (ID: ' . $course->ID . ')'
             );
         }
+        
+        $debug_info[] = 'Final formatted courses: ' . count($formatted_courses);
+        error_log('WPML-LifterLMS Debug: ' . implode(' | ', $debug_info));
         
         return $formatted_courses;
     }
