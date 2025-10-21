@@ -324,3 +324,5 @@ class WPML_LLMS_Course_Fixer {
         $this->init_stats();
     }
 }
+
+new WPML_LLMS_Course_Fixer();

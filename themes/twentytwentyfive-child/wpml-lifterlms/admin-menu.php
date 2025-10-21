@@ -26,13 +26,9 @@ class WPML_LLMS_Admin_Menu {
      * Add admin menu under WPML
      */
     public function add_admin_menu() {
-        // Check if WPML is active and has the main menu
-        if (!class_exists('SitePress')) {
-            return;
-        }
         
         add_submenu_page(
-            'sitepress-multilingual-cms/menu/languages.php', // Parent slug (WPML main menu)
+            'edit.php?post_type=course', // Parent slug (WPML main menu)
             __('LifterLMS', 'twentytwentyfive-child'),        // Page title
             __('LifterLMS', 'twentytwentyfive-child'),        // Menu title
             'manage_options',                                  // Capability
@@ -184,3 +180,5 @@ class WPML_LLMS_Admin_Menu {
         );
     }
 }
+
+new WPML_LLMS_Admin_Menu();

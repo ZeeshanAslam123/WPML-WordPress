@@ -220,3 +220,5 @@ class WPML_LLMS_Ajax_Handlers {
         wpml_llms_log('AJAX Activity: ' . json_encode($log_entry), 'info');
     }
 }
+
+new WPML_LLMS_Ajax_Handlers();

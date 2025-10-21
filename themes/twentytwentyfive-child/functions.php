@@ -73,26 +73,9 @@ function wpml_llms_admin_notices() {
 }
 add_action('admin_notices', 'wpml_llms_admin_notices');
 
-/**
- * Initialize WPML LifterLMS functionality only if required plugins are active
- */
-function wpml_llms_init() {
-    $plugins = wpml_llms_check_required_plugins();
-    
-    if ($plugins['WPML'] && $plugins['LifterLMS']) {
-        // Include core functionality files
-        require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/admin-menu.php';
-        require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/ajax-handlers.php';
-        require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/course-fixer.php';
-        
-        // Initialize admin menu
-        if (is_admin()) {
-            new WPML_LLMS_Admin_Menu();
-            new WPML_LLMS_Ajax_Handlers();
-        }
-    }
-}
-add_action('plugins_loaded', 'wpml_llms_init');
+require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/admin-menu.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/ajax-handlers.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/course-fixer.php';
 
 /**
  * Enqueue admin assets
