@@ -50,12 +50,12 @@ class WPML_LifterLMS_Course_Fixer {
      * Initialize hooks
      */
     private function init_hooks() {
-        add_action('admin_menu', array($this, 'add_admin_menu'));
+        // REMOVED: Admin menu registration - now handled in main plugin file
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
         
         // AJAX handlers
         add_action('wp_ajax_wpml_llms_get_english_courses', array($this, 'handle_get_english_courses'));
-        add_action('wp_ajax_wpml_llms_fix_course_relationships', array($this, 'handle_fix_course_relationships'));
+        // REMOVED: Duplicate AJAX handler - using main plugin's handle_fix_course_relationships_simple instead
         
         // Debug: Add admin notice to verify plugin is loading
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -70,20 +70,8 @@ class WPML_LifterLMS_Course_Fixer {
         echo '<div class="notice notice-info"><p>WPML LifterLMS Course Fixer is loaded and active!</p></div>';
     }
     
-    /**
-     * Add admin menu page
-     */
-    public function add_admin_menu() {
-        $hook = add_menu_page(
-            __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
-            __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
-            'manage_options',
-            'wpml-lifterlms-course-fixer',
-            array($this, 'render_admin_page'),
-            'dashicons-admin-tools',
-            30
-        );
-    }
+    // REMOVED: Admin menu functionality moved to main plugin file
+    // This class no longer handles menu creation to avoid conflicts
     
     /**
      * Enqueue admin assets
@@ -191,19 +179,40 @@ class WPML_LifterLMS_Course_Fixer {
      * Handle fix course relationships AJAX request
      */
     public function handle_fix_course_relationships() {
-        check_ajax_referer('wpml_llms_course_fixer', 'nonce');
+        // Add debugging
+        error_log('WPML-LifterLMS: AJAX handler called - handle_fix_course_relationships');
         
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Insufficient permissions', 'wpml-lifterlms-compatibility'));
+        try {
+            check_ajax_referer('wpml_llms_course_fixer', 'nonce');
+            
+            if (!current_user_can('manage_options')) {
+                error_log('WPML-LifterLMS: Insufficient permissions');
+                wp_send_json_error(__('Insufficient permissions', 'wpml-lifterlms-compatibility'));
+            }
+            
+            $course_id = intval($_POST['course_id']);
+            if (!$course_id) {
+                error_log('WPML-LifterLMS: Invalid course ID: ' . print_r($_POST, true));
+                wp_send_json_error(__('Invalid course ID', 'wpml-lifterlms-compatibility'));
+            }
+            
+            error_log('WPML-LifterLMS: Processing course ID: ' . $course_id);
+            $result = $this->fix_course_relationships($course_id);
+            wp_send_json_success($result);
+            
+        } catch (Exception $e) {
+            error_log('WPML-LifterLMS: Exception in AJAX handler: ' . $e->getMessage());
+            wp_send_json_error('Server error: ' . $e->getMessage());
         }
-        
-        $course_id = intval($_POST['course_id']);
-        if (!$course_id) {
-            wp_send_json_error(__('Invalid course ID', 'wpml-lifterlms-compatibility'));
-        }
-        
-        $result = $this->fix_course_relationships($course_id);
-        wp_send_json_success($result);
+    }
+    
+    /**
+     * Get English courses for admin dropdown (public method)
+     * 
+     * @return array
+     */
+    public function get_english_courses_for_admin() {
+        return $this->get_english_courses();
     }
     
     /**

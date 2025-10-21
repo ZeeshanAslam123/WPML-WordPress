@@ -131,14 +131,19 @@
                         $progressFill.css('width', '100%');
                         $progressText.text(wpmlLlmsCourseFixer.strings.fixComplete);
                         
-                        // Display logs
+                        // Display logs from details string
+                        if (response.data.details) {
+                            WpmlLlmsCourseFixer.displayDetailsAsLogs(response.data.details);
+                        }
+                        
+                        // Also display structured logs if available
                         if (response.data.logs && response.data.logs.length > 0) {
                             $.each(response.data.logs, function(index, log) {
                                 WpmlLlmsCourseFixer.addLog(log.type, log.message, log.timestamp);
                             });
                         }
                         
-                        WpmlLlmsCourseFixer.showNotice(wpmlLlmsCourseFixer.strings.fixComplete, 'success');
+                        WpmlLlmsCourseFixer.showNotice(response.data.message || wpmlLlmsCourseFixer.strings.fixComplete, 'success');
                         
                         setTimeout(function() {
                             $progress.hide();
@@ -155,6 +160,36 @@
                     WpmlLlmsCourseFixer.handleError(wpmlLlmsCourseFixer.strings.fixError + ': ' + error);
                     $progress.hide();
                     $button.prop('disabled', false).text(wpmlLlmsCourseFixer.strings.fixButton);
+                }
+            });
+        },
+        
+        /**
+         * Display details string as formatted logs
+         */
+        displayDetailsAsLogs: function(details) {
+            var $container = $('#log-container');
+            $container.empty();
+            
+            // Split details by lines and format each line
+            var lines = details.split('\n');
+            $.each(lines, function(index, line) {
+                if (line.trim()) {
+                    var logType = 'info';
+                    var message = line.trim();
+                    
+                    // Determine log type based on content
+                    if (message.includes('✅') || message.includes('SUCCESS') || message.includes('Connected') || message.includes('Fixed')) {
+                        logType = 'success';
+                    } else if (message.includes('❌') || message.includes('ERROR') || message.includes('Could not find') || message.includes('MISSING')) {
+                        logType = 'error';
+                    } else if (message.includes('⚠️') || message.includes('WARNING')) {
+                        logType = 'warning';
+                    } else if (message.includes('🔍') || message.includes('🔧') || message.includes('📋') || message.includes('🎯')) {
+                        logType = 'info';
+                    }
+                    
+                    WpmlLlmsCourseFixer.addLog(logType, message);
                 }
             });
         },
@@ -297,4 +332,3 @@
     });
     
 })(jQuery);
-
