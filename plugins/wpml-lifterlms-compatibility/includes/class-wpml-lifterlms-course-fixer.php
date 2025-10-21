@@ -50,7 +50,7 @@ class WPML_LifterLMS_Course_Fixer {
      * Initialize hooks
      */
     private function init_hooks() {
-        add_action('admin_menu', array($this, 'add_admin_menu'));
+        // REMOVED: Admin menu registration - now handled in main plugin file
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
         
         // AJAX handlers
@@ -70,20 +70,8 @@ class WPML_LifterLMS_Course_Fixer {
         echo '<div class="notice notice-info"><p>WPML LifterLMS Course Fixer is loaded and active!</p></div>';
     }
     
-    /**
-     * Add admin menu page
-     */
-    public function add_admin_menu() {
-        $hook = add_menu_page(
-            __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
-            __('WPML LifterLMS Fix', 'wpml-lifterlms-compatibility'),
-            'manage_options',
-            'wpml-lifterlms-course-fixer',
-            array($this, 'render_admin_page'),
-            'dashicons-admin-tools',
-            30
-        );
-    }
+    // REMOVED: Admin menu functionality moved to main plugin file
+    // This class no longer handles menu creation to avoid conflicts
     
     /**
      * Enqueue admin assets

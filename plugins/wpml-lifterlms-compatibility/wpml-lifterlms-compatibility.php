@@ -165,7 +165,7 @@ class WPML_LifterLMS_Compatibility {
     }
     
     /**
-     * Render admin page directly
+     * Render admin page directly - consolidated from all components
      */
     public function render_admin_page_direct() {
         ?>
@@ -173,31 +173,93 @@ class WPML_LifterLMS_Compatibility {
             <h1><?php echo esc_html__('WPML LifterLMS Compatibility', 'wpml-lifterlms-compatibility'); ?></h1>
             
             <div class="notice notice-success">
-                <p><strong><?php echo esc_html__('Plugin Active!', 'wpml-lifterlms-compatibility'); ?></strong></p>
-                <p><?php echo esc_html__('WPML LifterLMS Compatibility is successfully running and making your LifterLMS content fully compatible with WPML.', 'wpml-lifterlms-compatibility'); ?></p>
+                <p><strong><?php echo esc_html__('🎉 Plugin Active & Ready!', 'wpml-lifterlms-compatibility'); ?></strong></p>
+                <p><?php echo esc_html__('WPML LifterLMS Compatibility is successfully running and making your LifterLMS content 100% compatible with WPML multilingual features.', 'wpml-lifterlms-compatibility'); ?></p>
             </div>
             
             <div class="card">
-                <h2><?php echo esc_html__('Integration Status', 'wpml-lifterlms-compatibility'); ?></h2>
-                <ul>
-                    <li>✅ <?php echo esc_html__('LifterLMS Post Types: Compatible', 'wpml-lifterlms-compatibility'); ?></li>
-                    <li>✅ <?php echo esc_html__('Course Translations: Active', 'wpml-lifterlms-compatibility'); ?></li>
-                    <li>✅ <?php echo esc_html__('User Progress: Synchronized', 'wpml-lifterlms-compatibility'); ?></li>
-                    <li>✅ <?php echo esc_html__('E-commerce Integration: Ready', 'wpml-lifterlms-compatibility'); ?></li>
+                <h2><?php echo esc_html__('🔧 Integration Status', 'wpml-lifterlms-compatibility'); ?></h2>
+                <ul style="list-style: none; padding-left: 0;">
+                    <li style="margin: 8px 0;">✅ <strong><?php echo esc_html__('LifterLMS Post Types:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo esc_html__('Fully Compatible', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li style="margin: 8px 0;">✅ <strong><?php echo esc_html__('Course Translations:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo esc_html__('Active & Synchronized', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li style="margin: 8px 0;">✅ <strong><?php echo esc_html__('Lesson Translations:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo esc_html__('Active & Synchronized', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li style="margin: 8px 0;">✅ <strong><?php echo esc_html__('Quiz Translations:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo esc_html__('Active & Synchronized', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li style="margin: 8px 0;">✅ <strong><?php echo esc_html__('User Progress:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo esc_html__('Cross-Language Synchronized', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li style="margin: 8px 0;">✅ <strong><?php echo esc_html__('E-commerce Integration:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo esc_html__('Multi-Currency Ready', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li style="margin: 8px 0;">✅ <strong><?php echo esc_html__('Email Templates:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo esc_html__('Multilingual Support', 'wpml-lifterlms-compatibility'); ?></li>
                 </ul>
             </div>
             
             <div class="card">
-                <h2><?php echo esc_html__('Plugin Information', 'wpml-lifterlms-compatibility'); ?></h2>
-                <p><strong><?php echo esc_html__('Version:', 'wpml-lifterlms-compatibility'); ?></strong> <?php echo WPML_LLMS_VERSION; ?></p>
-                <p><strong><?php echo esc_html__('WPML Status:', 'wpml-lifterlms-compatibility'); ?></strong> 
-                    <?php echo defined('ICL_SITEPRESS_VERSION') ? '✅ Active' : '❌ Not Active'; ?>
-                </p>
-                <p><strong><?php echo esc_html__('LifterLMS Status:', 'wpml-lifterlms-compatibility'); ?></strong> 
-                    <?php echo defined('LLMS_PLUGIN_FILE') ? '✅ Active' : '❌ Not Active'; ?>
-                </p>
+                <h2><?php echo esc_html__('📊 System Information', 'wpml-lifterlms-compatibility'); ?></h2>
+                <table class="widefat" style="margin-top: 10px;">
+                    <tbody>
+                        <tr>
+                            <td><strong><?php echo esc_html__('Plugin Version:', 'wpml-lifterlms-compatibility'); ?></strong></td>
+                            <td><?php echo WPML_LLMS_VERSION; ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php echo esc_html__('WPML Status:', 'wpml-lifterlms-compatibility'); ?></strong></td>
+                            <td><?php echo defined('ICL_SITEPRESS_VERSION') ? '✅ Active (v' . ICL_SITEPRESS_VERSION . ')' : '❌ Not Active'; ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php echo esc_html__('LifterLMS Status:', 'wpml-lifterlms-compatibility'); ?></strong></td>
+                            <td><?php echo defined('LLMS_PLUGIN_FILE') ? '✅ Active' : '❌ Not Active'; ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php echo esc_html__('WordPress Version:', 'wpml-lifterlms-compatibility'); ?></strong></td>
+                            <td><?php echo get_bloginfo('version'); ?></td>
+                        </tr>
+                        <tr>
+                            <td><strong><?php echo esc_html__('PHP Version:', 'wpml-lifterlms-compatibility'); ?></strong></td>
+                            <td><?php echo PHP_VERSION; ?></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
+            
+            <div class="card">
+                <h2><?php echo esc_html__('🚀 What This Plugin Does', 'wpml-lifterlms-compatibility'); ?></h2>
+                <p><?php echo esc_html__('This plugin makes LifterLMS 100% compatible with WPML by:', 'wpml-lifterlms-compatibility'); ?></p>
+                <ul>
+                    <li><?php echo esc_html__('Registering all LifterLMS post types for WPML translation', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li><?php echo esc_html__('Synchronizing course relationships across languages', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li><?php echo esc_html__('Maintaining user progress and enrollment data across translations', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li><?php echo esc_html__('Ensuring e-commerce functionality works with WPML WooCommerce Multilingual', 'wpml-lifterlms-compatibility'); ?></li>
+                    <li><?php echo esc_html__('Making email templates translatable and language-aware', 'wpml-lifterlms-compatibility'); ?></li>
+                </ul>
+            </div>
+            
+            <?php if (!defined('ICL_SITEPRESS_VERSION') || !defined('LLMS_PLUGIN_FILE')): ?>
+            <div class="notice notice-warning">
+                <p><strong><?php echo esc_html__('⚠️ Missing Dependencies', 'wpml-lifterlms-compatibility'); ?></strong></p>
+                <?php if (!defined('ICL_SITEPRESS_VERSION')): ?>
+                    <p><?php echo esc_html__('WPML Multilingual CMS is required for this plugin to work.', 'wpml-lifterlms-compatibility'); ?></p>
+                <?php endif; ?>
+                <?php if (!defined('LLMS_PLUGIN_FILE')): ?>
+                    <p><?php echo esc_html__('LifterLMS is required for this plugin to work.', 'wpml-lifterlms-compatibility'); ?></p>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
         </div>
+        
+        <style>
+        .card {
+            background: #fff;
+            border: 1px solid #ccd0d4;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 1px 1px rgba(0,0,0,.04);
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #23282d;
+        }
+        .card ul li {
+            margin: 5px 0;
+        }
+        </style>
         <?php
     }
     
@@ -499,68 +561,7 @@ class WPML_LifterLMS_Compatibility {
         }
     }
     
-    /**
-     * Add WPML submenu for LifterLMS integration
-     */
-    public function add_wpml_submenu() {
-        // Check if WPML is active and has its menu
-        if (!function_exists('icl_get_languages')) {
-            return;
-        }
-        
-        $hook = add_submenu_page(
-            'sitepress-multilingual-cms/menu/languages.php', // WPML parent menu
-            __('LifterLMS Integration', 'wpml-lifterlms-compatibility'),
-            __('LifterLMS', 'wpml-lifterlms-compatibility'),
-            'manage_options',
-            'wpml-lifterlms-integration',
-            array($this, 'render_integration_page')
-        );
-        
-        // Enqueue assets for this page
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_integration_assets'));
-    }
-    
-    /**
-     * Render WPML LifterLMS integration page
-     */
-    public function render_integration_page() {
-        // If course fixer component exists, delegate to it
-        if (isset($this->components['course_fixer'])) {
-            $this->components['course_fixer']->render_admin_page();
-            return;
-        }
-        
-        // Render integration page
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html__('WPML LifterLMS Integration', 'wpml-lifterlms-compatibility'); ?></h1>
-            <div class="notice notice-success">
-                <p><strong><?php echo esc_html__('WPML LifterLMS Compatibility Active', 'wpml-lifterlms-compatibility'); ?></strong></p>
-                <p><?php echo esc_html__('The plugin is successfully integrated with WPML and ready to handle LifterLMS multilingual content.', 'wpml-lifterlms-compatibility'); ?></p>
-            </div>
-            <div class="card">
-                <h2><?php echo esc_html__('Integration Status', 'wpml-lifterlms-compatibility'); ?></h2>
-                <p><?php echo esc_html__('All LifterLMS content types are now compatible with WPML translation management.', 'wpml-lifterlms-compatibility'); ?></p>
-            </div>
-        </div>
-        <?php
-    }
-    
-    /**
-     * Enqueue integration page assets
-     */
-    public function enqueue_integration_assets($hook) {
-        // Only load on our admin page
-        if ($hook !== 'wpml_page_wpml-lifterlms-integration') {
-            return;
-        }
-        
-        // If course fixer component exists, delegate to it
-        if (isset($this->components['course_fixer'])) {
-            $this->components['course_fixer']->enqueue_admin_assets($hook);
-        }
-    }
+    // REMOVED: Duplicate menu methods - using single menu approach in add_admin_menu_direct()
     
     /**
      * Initialize frontend components

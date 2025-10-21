@@ -22,7 +22,7 @@ class WPML_LifterLMS_Admin {
      * Initialize the component
      */
     public function init() {
-        add_action('admin_menu', array($this, 'add_admin_menu'));
+        // REMOVED: Admin menu registration - now handled in main plugin file
         add_action('admin_init', array($this, 'register_settings'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         
@@ -36,34 +36,8 @@ class WPML_LifterLMS_Admin {
         add_action('wp_ajax_wpml_llms_import_config', array($this, 'handle_import_config'));
     }
     
-    /**
-     * Add admin menu
-     */
-    public function add_admin_menu() {
-        // Try to add as WPML submenu first, fallback to standalone menu
-        if (defined('ICL_SITEPRESS_VERSION') && function_exists('icl_get_languages')) {
-            // Add as WPML submenu if WPML is active
-            add_submenu_page(
-                'sitepress-multilingual-cms/menu/languages.php',
-                __('LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
-                __('LifterLMS', 'wpml-lifterlms-compatibility'),
-                'manage_options',
-                'wpml-lifterlms-compatibility',
-                array($this, 'admin_page')
-            );
-        } else {
-            // Add as standalone menu if WPML is not active or accessible
-            add_menu_page(
-                __('WPML LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
-                __('WPML LifterLMS', 'wpml-lifterlms-compatibility'),
-                'manage_options',
-                'wpml-lifterlms-compatibility',
-                array($this, 'admin_page'),
-                'dashicons-translation',
-                30
-            );
-        }
-    }
+    // REMOVED: Admin menu functionality moved to main plugin file
+    // This class no longer handles menu creation to avoid conflicts
     
     /**
      * Register settings
