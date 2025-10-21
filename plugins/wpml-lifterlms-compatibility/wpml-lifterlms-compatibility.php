@@ -947,27 +947,20 @@ class WPML_LifterLMS_Compatibility {
         $results[] = '🎉 RELATIONSHIP FIXING COMPLETED!';
         $results[] = '================================';
         
-        // Fix LifterLMS relationships (lessons, quizzes, etc.)
-        $results[] = 'Checking LifterLMS relationships...';
+        // Step 6: DATABASE-LEVEL VERIFICATION & FIXES
+        $results[] = '';
+        $results[] = '📋 STEP 6: DATABASE-LEVEL VERIFICATION & FIXES';
+        $results[] = '==============================================';
         
-        // Get course lessons
-        $lessons = get_posts(array(
-            'post_type' => 'lesson',
-            'meta_key' => '_llms_parent_course',
-            'meta_value' => $course_id,
-            'numberposts' => -1
-        ));
+        // Based on your database meta, fix the specific missing relationships
+        $this->fix_database_relationships($results);
         
-        if ($lessons) {
-            $results[] = 'Found ' . count($lessons) . ' lessons attached to this course';
-            foreach ($lessons as $lesson) {
-                $results[] = '- Lesson: ' . $lesson->post_title . ' (ID: ' . $lesson->ID . ')';
-            }
-        } else {
-            $results[] = 'No lessons found for this course';
-        }
+        $results[] = '';
+        $results[] = '🎯 FINAL VERIFICATION';
+        $results[] = '====================';
         
-        $results[] = 'Course relationship fix completed successfully!';
+        // Verify the fixes worked
+        $this->verify_relationships($results);
         
         wp_send_json_success(array(
             'message' => 'Course relationships fixed successfully!',
