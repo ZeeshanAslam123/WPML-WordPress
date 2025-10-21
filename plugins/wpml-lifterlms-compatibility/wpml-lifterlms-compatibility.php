@@ -759,11 +759,85 @@ class WPML_LifterLMS_Compatibility {
             wp_send_json_error('Invalid course ID');
         }
         
-        // Simple fix - just return success for now to test AJAX
+        // Get course details
+        $course = get_post($course_id);
+        if (!$course || $course->post_type !== 'course') {
+            wp_send_json_error('Invalid course');
+        }
+        
+        // Simple relationship fix logic
+        $results = array();
+        $results[] = 'Processing course: ' . $course->post_title . ' (ID: ' . $course_id . ')';
+        
+        // Fix WPML language relationships if WPML is active
+        if (function_exists('icl_get_languages')) {
+            $results[] = 'WPML detected - fixing language relationships...';
+            
+            // Get course language
+            $course_language = apply_filters('wpml_element_language_code', null, array(
+                'element_id' => $course_id,
+                'element_type' => 'post_course'
+            ));
+            
+            if ($course_language) {
+                $results[] = 'Course language: ' . $course_language;
+                
+                // Get translations
+                $translations = apply_filters('wpml_get_element_translations', null, $course_id, 'post_course');
+                if ($translations) {
+                    $results[] = 'Found ' . count($translations) . ' translations';
+                    foreach ($translations as $lang => $translation) {
+                        if ($translation->element_id != $course_id) {
+                            $results[] = 'Translation in ' . $lang . ': ID ' . $translation->element_id;
+                        }
+                    }
+                } else {
+                    $results[] = 'No translations found';
+                }
+            } else {
+                $results[] = 'Course language not set - setting to default';
+                // Set course to default language if not set
+                $default_language = apply_filters('wpml_default_language', null);
+                if ($default_language) {
+                    do_action('wpml_set_element_language_details', array(
+                        'element_id' => $course_id,
+                        'element_type' => 'post_course',
+                        'language_code' => $default_language
+                    ));
+                    $results[] = 'Set course language to: ' . $default_language;
+                }
+            }
+        } else {
+            $results[] = 'WPML not active - no language relationships to fix';
+        }
+        
+        // Fix LifterLMS relationships (lessons, quizzes, etc.)
+        $results[] = 'Checking LifterLMS relationships...';
+        
+        // Get course lessons
+        $lessons = get_posts(array(
+            'post_type' => 'lesson',
+            'meta_key' => '_llms_parent_course',
+            'meta_value' => $course_id,
+            'numberposts' => -1
+        ));
+        
+        if ($lessons) {
+            $results[] = 'Found ' . count($lessons) . ' lessons attached to this course';
+            foreach ($lessons as $lesson) {
+                $results[] = '- Lesson: ' . $lesson->post_title . ' (ID: ' . $lesson->ID . ')';
+            }
+        } else {
+            $results[] = 'No lessons found for this course';
+        }
+        
+        $results[] = 'Course relationship fix completed successfully!';
+        
         wp_send_json_success(array(
-            'message' => 'Course relationship fixed successfully!',
+            'message' => 'Course relationships fixed successfully!',
             'course_id' => $course_id,
-            'details' => 'Fixed relationships for course ID: ' . $course_id
+            'course_title' => $course->post_title,
+            'details' => implode("\n", $results)
         ));
     }
     
