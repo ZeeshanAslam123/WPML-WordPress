@@ -296,23 +296,111 @@ trait WPML_LifterLMS_Hierarchy_Fixer {
             return;
         }
         
-        // Find sections for each course
+        // Find sections for each course - try multiple approaches
+        $results[] = '';
+        $results[] = '🔍 SEARCHING FOR SECTIONS...';
+        
+        // Method 1: Direct meta query
         $english_sections = get_posts(array(
             'post_type' => 'section',
             'meta_key' => '_llms_parent_course',
             'meta_value' => $english_course_id,
-            'numberposts' => 1
+            'numberposts' => -1,
+            'post_status' => 'publish'
         ));
         
         $urdu_sections = get_posts(array(
             'post_type' => 'section',
             'meta_key' => '_llms_parent_course',
             'meta_value' => $urdu_course_id,
-            'numberposts' => 1
+            'numberposts' => -1,
+            'post_status' => 'publish'
         ));
         
+        $results[] = '📚 Method 1 - Direct meta query:';
+        $results[] = '  - English sections found: ' . count($english_sections);
+        $results[] = '  - Urdu sections found: ' . count($urdu_sections);
+        
+        // Method 2: If no sections found, try finding all sections and check manually
         if (empty($english_sections) || empty($urdu_sections)) {
-            $results[] = '❌ Could not find sections for both courses';
+            $results[] = '🔍 Method 2 - Manual search through all sections...';
+            
+            $all_sections = get_posts(array(
+                'post_type' => 'section',
+                'numberposts' => -1,
+                'post_status' => 'publish'
+            ));
+            
+            $results[] = '📚 Total sections in database: ' . count($all_sections);
+            
+            foreach ($all_sections as $section) {
+                $parent_course = get_post_meta($section->ID, '_llms_parent_course', true);
+                $results[] = '  - Section "' . $section->post_title . '" (ID: ' . $section->ID . ') → Parent course: ' . ($parent_course ?: 'NONE');
+                
+                if ($parent_course == $english_course_id) {
+                    $english_sections[] = $section;
+                } elseif ($parent_course == $urdu_course_id) {
+                    $urdu_sections[] = $section;
+                }
+            }
+            
+            $results[] = '📚 After manual search:';
+            $results[] = '  - English sections: ' . count($english_sections);
+            $results[] = '  - Urdu sections: ' . count($urdu_sections);
+        }
+        
+        // If still no sections, try to create the missing relationships
+        if (empty($english_sections) || empty($urdu_sections)) {
+            $results[] = '';
+            $results[] = '🔧 ATTEMPTING TO FIX MISSING SECTION RELATIONSHIPS...';
+            
+            // Find sections that might belong to these courses but have wrong/missing parent
+            $orphaned_sections = get_posts(array(
+                'post_type' => 'section',
+                'numberposts' => -1,
+                'post_status' => 'publish',
+                'meta_query' => array(
+                    'relation' => 'OR',
+                    array(
+                        'key' => '_llms_parent_course',
+                        'compare' => 'NOT EXISTS'
+                    ),
+                    array(
+                        'key' => '_llms_parent_course',
+                        'value' => '',
+                        'compare' => '='
+                    )
+                )
+            ));
+            
+            $results[] = '🔍 Found ' . count($orphaned_sections) . ' orphaned sections';
+            
+            // Try to match sections by language or position
+            foreach ($orphaned_sections as $section) {
+                $section_lang = apply_filters('wpml_element_language_code', null, array(
+                    'element_id' => $section->ID,
+                    'element_type' => 'post_section'
+                ));
+                
+                $results[] = '  - Section "' . $section->post_title . '" (ID: ' . $section->ID . ') → Language: ' . ($section_lang ?: 'UNASSIGNED');
+                
+                if ($section_lang === 'en' && empty($english_sections)) {
+                    update_post_meta($section->ID, '_llms_parent_course', $english_course_id);
+                    $english_sections[] = $section;
+                    $results[] = '    ✅ Assigned to English course';
+                } elseif ($section_lang === 'ur' && empty($urdu_sections)) {
+                    update_post_meta($section->ID, '_llms_parent_course', $urdu_course_id);
+                    $urdu_sections[] = $section;
+                    $results[] = '    ✅ Assigned to Urdu course';
+                }
+            }
+        }
+        
+        if (empty($english_sections) || empty($urdu_sections)) {
+            $results[] = '';
+            $results[] = '❌ FINAL RESULT: Could not find or create sections for both courses';
+            $results[] = '  - English sections: ' . count($english_sections);
+            $results[] = '  - Urdu sections: ' . count($urdu_sections);
             return;
         }
         
