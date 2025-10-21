@@ -189,7 +189,8 @@ class WPML_LifterLMS_Compatibility {
                             <strong>🐛 Debug Info:</strong><br>
                             <?php
                             // Show debug information
-                            echo 'LifterLMS Active: ' . (function_exists('llms_get_posts') ? '✅ YES' : '❌ NO') . '<br>';
+                            $lifterlms_active = defined('LLMS_PLUGIN_FILE') || class_exists('LifterLMS') || function_exists('llms_get_posts');
+                            echo 'LifterLMS Active: ' . ($lifterlms_active ? '✅ YES' : '❌ NO') . '<br>';
                             echo 'WPML Active: ' . (function_exists('icl_get_languages') ? '✅ YES' : '❌ NO') . '<br>';
                             
                             // Check course post type
@@ -723,14 +724,15 @@ class WPML_LifterLMS_Compatibility {
     public function get_english_courses_direct() {
         $debug_info = array();
         
-        // Check if LifterLMS is active
-        if (!function_exists('llms_get_posts')) {
-            $debug_info[] = 'LifterLMS not active - llms_get_posts function not found';
+        // Check if course post type exists (more reliable than checking LifterLMS functions)
+        $post_types = get_post_types();
+        if (!in_array('course', $post_types)) {
+            $debug_info[] = 'Course post type not registered';
             error_log('WPML-LifterLMS Debug: ' . implode(' | ', $debug_info));
             return array();
         }
         
-        $debug_info[] = 'LifterLMS is active';
+        $debug_info[] = 'Course post type is registered';
         
         // First, let's try to get ALL courses without any filtering
         $all_courses = get_posts(array(
