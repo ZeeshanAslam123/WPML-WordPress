@@ -26,6 +26,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Include hierarchy fixer helper methods
+require_once plugin_dir_path(__FILE__) . 'includes/class-wpml-lifterlms-hierarchy-fixer.php';
+
 // Define plugin constants
 define('WPML_LLMS_VERSION', '1.0.0');
 define('WPML_LLMS_PLUGIN_FILE', __FILE__);
@@ -38,6 +41,7 @@ define('WPML_LLMS_TEXT_DOMAIN', 'wpml-lifterlms-compatibility');
  * Main plugin class
  */
 class WPML_LifterLMS_Compatibility {
+    use WPML_LifterLMS_Hierarchy_Fixer;
     
     /**
      * Plugin instance
@@ -765,217 +769,183 @@ class WPML_LifterLMS_Compatibility {
             wp_send_json_error('Invalid course');
         }
         
-        // Simple relationship fix logic
+        // DEEP RELATIONSHIP FIX WITH COMPREHENSIVE LOGGING
         $results = array();
-        $results[] = 'Processing course: ' . $course->post_title . ' (ID: ' . $course_id . ')';
+        $results[] = '🔍 STARTING DEEP ANALYSIS...';
+        $results[] = 'Selected course: ' . $course->post_title . ' (ID: ' . $course_id . ')';
         
-        // Fix WPML language relationships if WPML is active
-        if (function_exists('icl_get_languages')) {
-            $results[] = 'WPML detected - fixing language relationships...';
-            
-            // Get all courses to find potential translations
-            $all_courses = get_posts(array(
-                'post_type' => 'course',
-                'post_status' => 'publish',
-                'numberposts' => -1
+        // Step 1: Analyze WPML setup
+        $results[] = '';
+        $results[] = '📋 STEP 1: WPML ANALYSIS';
+        $results[] = '========================';
+        
+        if (!function_exists('icl_get_languages')) {
+            $results[] = '❌ WPML not detected - cannot fix relationships';
+            wp_send_json_success(array(
+                'message' => 'WPML not active',
+                'details' => implode("\n", $results)
             ));
-            
-            $results[] = 'Found ' . count($all_courses) . ' total courses';
-            
-            // Find the English course (ID: 260) and Urdu course (ID: 261) based on your screenshot
-            $english_course_id = 260;
-            $urdu_course_id = 261;
-            
-            // Check if these courses exist
-            $english_course = get_post($english_course_id);
-            $urdu_course = get_post($urdu_course_id);
-            
-            if ($english_course && $urdu_course) {
-                $results[] = 'Found English course: ' . $english_course->post_title . ' (ID: ' . $english_course_id . ')';
-                $results[] = 'Found Urdu course: ' . $urdu_course->post_title . ' (ID: ' . $urdu_course_id . ')';
+            return;
+        }
+        
+        $results[] = '✅ WPML detected and active';
+        
+        // Get available languages
+        $languages = icl_get_languages('skip_missing=0');
+        $results[] = '📝 Available languages: ' . implode(', ', array_keys($languages));
+        
+        $default_language = apply_filters('wpml_default_language', null);
+        $results[] = '🌐 Default language: ' . $default_language;
+        
+        // Step 2: Find all courses and analyze their languages
+        $results[] = '';
+        $results[] = '📋 STEP 2: COURSE DISCOVERY & ANALYSIS';
+        $results[] = '=====================================';
+        
+        $all_courses = get_posts(array(
+            'post_type' => 'course',
+            'post_status' => 'publish',
+            'numberposts' => -1,
+            'orderby' => 'ID',
+            'order' => 'ASC'
+        ));
+        
+        $results[] = '📚 Found ' . count($all_courses) . ' total courses';
+        
+        $course_languages = array();
+        foreach ($all_courses as $c) {
+            $lang = apply_filters('wpml_element_language_code', null, array(
+                'element_id' => $c->ID,
+                'element_type' => 'post_course'
+            ));
+            $course_languages[$c->ID] = array(
+                'title' => $c->post_title,
+                'language' => $lang ?: 'unassigned'
+            );
+            $results[] = '  📖 Course "' . $c->post_title . '" (ID: ' . $c->ID . ') → Language: ' . ($lang ?: 'UNASSIGNED');
+        }
+        
+        // Step 3: Identify translation pairs
+        $results[] = '';
+        $results[] = '📋 STEP 3: IDENTIFYING TRANSLATION PAIRS';
+        $results[] = '=======================================';
+        
+        // Group courses by language
+        $courses_by_language = array();
+        foreach ($course_languages as $id => $info) {
+            $courses_by_language[$info['language']][] = array('id' => $id, 'title' => $info['title']);
+        }
+        
+        foreach ($courses_by_language as $lang => $courses) {
+            $results[] = '🏷️ ' . strtoupper($lang) . ' courses: ' . count($courses);
+            foreach ($courses as $c) {
+                $results[] = '    - ' . $c['title'] . ' (ID: ' . $c['id'] . ')';
+            }
+        }
+        
+        // Step 4: Smart pairing logic
+        $results[] = '';
+        $results[] = '📋 STEP 4: SMART COURSE PAIRING';
+        $results[] = '==============================';
+        
+        // Find English and Arabic/Urdu courses
+        $english_courses = isset($courses_by_language['en']) ? $courses_by_language['en'] : array();
+        $arabic_courses = isset($courses_by_language['ar']) ? $courses_by_language['ar'] : array();
+        $urdu_courses = isset($courses_by_language['ur']) ? $courses_by_language['ur'] : array();
+        $unassigned_courses = isset($courses_by_language['unassigned']) ? $courses_by_language['unassigned'] : array();
+        
+        $results[] = '🔍 English courses: ' . count($english_courses);
+        $results[] = '🔍 Arabic courses: ' . count($arabic_courses);
+        $results[] = '🔍 Urdu courses: ' . count($urdu_courses);
+        $results[] = '🔍 Unassigned courses: ' . count($unassigned_courses);
+        
+        // Auto-assign languages to unassigned courses based on content
+        if (!empty($unassigned_courses)) {
+            $results[] = '';
+            $results[] = '🔧 AUTO-ASSIGNING LANGUAGES TO UNASSIGNED COURSES';
+            foreach ($unassigned_courses as $course) {
+                $title = $course['title'];
+                $detected_lang = 'en'; // default
                 
-                // Set language for English course
+                // Simple language detection based on title
+                if (preg_match('/[\x{0600}-\x{06FF}]/u', $title)) {
+                    $detected_lang = 'ar'; // Arabic/Urdu script
+                    $results[] = '🔍 Detected Arabic/Urdu script in "' . $title . '" → Setting to Arabic';
+                } else {
+                    $results[] = '🔍 No Arabic script in "' . $title . '" → Setting to English';
+                }
+                
+                // Set the language
                 do_action('wpml_set_element_language_details', array(
-                    'element_id' => $english_course_id,
+                    'element_id' => $course['id'],
                     'element_type' => 'post_course',
-                    'language_code' => 'en'
+                    'language_code' => $detected_lang
                 ));
-                $results[] = 'Set English course language to: en';
                 
-                // Set language for Urdu course
-                do_action('wpml_set_element_language_details', array(
-                    'element_id' => $urdu_course_id,
-                    'element_type' => 'post_course',
-                    'language_code' => 'ur'
-                ));
-                $results[] = 'Set Urdu course language to: ur';
+                // Move to appropriate array
+                if ($detected_lang === 'ar') {
+                    $arabic_courses[] = $course;
+                } else {
+                    $english_courses[] = $course;
+                }
                 
-                // Connect them as translations
-                $trid = apply_filters('wpml_element_trid', null, $english_course_id, 'post_course');
+                $results[] = '✅ Set course "' . $title . '" (ID: ' . $course['id'] . ') to language: ' . $detected_lang;
+            }
+        }
+        
+        // Step 5: Create translation relationships
+        $results[] = '';
+        $results[] = '📋 STEP 5: CREATING TRANSLATION RELATIONSHIPS';
+        $results[] = '============================================';
+        
+        $target_courses = !empty($arabic_courses) ? $arabic_courses : $urdu_courses;
+        $target_lang = !empty($arabic_courses) ? 'ar' : 'ur';
+        
+        if (empty($english_courses) || empty($target_courses)) {
+            $results[] = '❌ Cannot create relationships - need at least one English and one ' . strtoupper($target_lang) . ' course';
+        } else {
+            $results[] = '🔗 Creating relationships between English and ' . strtoupper($target_lang) . ' courses';
+            
+            // Pair courses (assuming first English with first target language)
+            for ($i = 0; $i < min(count($english_courses), count($target_courses)); $i++) {
+                $en_course = $english_courses[$i];
+                $target_course = $target_courses[$i];
+                
+                $results[] = '';
+                $results[] = '🔗 PAIRING COURSES:';
+                $results[] = '  📖 English: "' . $en_course['title'] . '" (ID: ' . $en_course['id'] . ')';
+                $results[] = '  📖 ' . strtoupper($target_lang) . ': "' . $target_course['title'] . '" (ID: ' . $target_course['id'] . ')';
+                
+                // Create translation relationship
+                $trid = apply_filters('wpml_element_trid', null, $en_course['id'], 'post_course');
                 if (!$trid) {
-                    // Create new translation group
                     do_action('wpml_set_element_language_details', array(
-                        'element_id' => $english_course_id,
+                        'element_id' => $en_course['id'],
                         'element_type' => 'post_course',
                         'language_code' => 'en',
                         'source_language_code' => null
                     ));
-                    $trid = apply_filters('wpml_element_trid', null, $english_course_id, 'post_course');
-                    $results[] = 'Created new translation group with TRID: ' . $trid;
+                    $trid = apply_filters('wpml_element_trid', null, $en_course['id'], 'post_course');
+                    $results[] = '  ✅ Created translation group (TRID: ' . $trid . ')';
                 }
                 
-                // Add Urdu course to the same translation group
                 do_action('wpml_set_element_language_details', array(
-                    'element_id' => $urdu_course_id,
+                    'element_id' => $target_course['id'],
                     'element_type' => 'post_course',
-                    'language_code' => 'ur',
+                    'language_code' => $target_lang,
                     'source_language_code' => 'en',
                     'trid' => $trid
                 ));
-                $results[] = 'Connected Urdu course as translation of English course';
+                $results[] = '  ✅ Connected courses as translations';
                 
-                // Now fix SECTION relationships first
-                $results[] = 'Fixing section relationships...';
-                
-                // Get sections for English course
-                $english_sections = get_posts(array(
-                    'post_type' => 'section',
-                    'meta_key' => '_llms_parent_course',
-                    'meta_value' => $english_course_id,
-                    'numberposts' => -1,
-                    'orderby' => 'menu_order',
-                    'order' => 'ASC'
-                ));
-                
-                // Get sections for Urdu course
-                $urdu_sections = get_posts(array(
-                    'post_type' => 'section',
-                    'meta_key' => '_llms_parent_course',
-                    'meta_value' => $urdu_course_id,
-                    'numberposts' => -1,
-                    'orderby' => 'menu_order',
-                    'order' => 'ASC'
-                ));
-                
-                $results[] = 'English course has ' . count($english_sections) . ' sections';
-                $results[] = 'Urdu course has ' . count($urdu_sections) . ' sections';
-                
-                // Connect sections as translations
-                for ($i = 0; $i < min(count($english_sections), count($urdu_sections)); $i++) {
-                    $english_section = $english_sections[$i];
-                    $urdu_section = $urdu_sections[$i];
-                    
-                    // Set section languages
-                    do_action('wpml_set_element_language_details', array(
-                        'element_id' => $english_section->ID,
-                        'element_type' => 'post_section',
-                        'language_code' => 'en'
-                    ));
-                    
-                    do_action('wpml_set_element_language_details', array(
-                        'element_id' => $urdu_section->ID,
-                        'element_type' => 'post_section',
-                        'language_code' => 'ur'
-                    ));
-                    
-                    // Create translation group for sections
-                    $section_trid = apply_filters('wpml_element_trid', null, $english_section->ID, 'post_section');
-                    if (!$section_trid) {
-                        do_action('wpml_set_element_language_details', array(
-                            'element_id' => $english_section->ID,
-                            'element_type' => 'post_section',
-                            'language_code' => 'en',
-                            'source_language_code' => null
-                        ));
-                        $section_trid = apply_filters('wpml_element_trid', null, $english_section->ID, 'post_section');
-                    }
-                    
-                    // Connect Urdu section as translation
-                    do_action('wpml_set_element_language_details', array(
-                        'element_id' => $urdu_section->ID,
-                        'element_type' => 'post_section',
-                        'language_code' => 'ur',
-                        'source_language_code' => 'en',
-                        'trid' => $section_trid
-                    ));
-                    
-                    $results[] = 'Connected sections: "' . $english_section->post_title . '" ↔ "' . $urdu_section->post_title . '"';
-                    
-                    // Now fix lessons within this section
-                    $results[] = 'Fixing lessons for section: ' . $english_section->post_title;
-                    
-                    // Get lessons for this English section
-                    $english_section_lessons = get_posts(array(
-                        'post_type' => 'lesson',
-                        'meta_key' => '_llms_parent_section',
-                        'meta_value' => $english_section->ID,
-                        'numberposts' => -1,
-                        'orderby' => 'menu_order',
-                        'order' => 'ASC'
-                    ));
-                    
-                    // Get lessons for this Urdu section
-                    $urdu_section_lessons = get_posts(array(
-                        'post_type' => 'lesson',
-                        'meta_key' => '_llms_parent_section',
-                        'meta_value' => $urdu_section->ID,
-                        'numberposts' => -1,
-                        'orderby' => 'menu_order',
-                        'order' => 'ASC'
-                    ));
-                    
-                    $results[] = '  English section has ' . count($english_section_lessons) . ' lessons';
-                    $results[] = '  Urdu section has ' . count($urdu_section_lessons) . ' lessons';
-                    
-                    // Connect lessons within this section
-                    for ($j = 0; $j < min(count($english_section_lessons), count($urdu_section_lessons)); $j++) {
-                        $english_lesson = $english_section_lessons[$j];
-                        $urdu_lesson = $urdu_section_lessons[$j];
-                        
-                        // Set lesson languages
-                        do_action('wpml_set_element_language_details', array(
-                            'element_id' => $english_lesson->ID,
-                            'element_type' => 'post_lesson',
-                            'language_code' => 'en'
-                        ));
-                        
-                        do_action('wpml_set_element_language_details', array(
-                            'element_id' => $urdu_lesson->ID,
-                            'element_type' => 'post_lesson',
-                            'language_code' => 'ur'
-                        ));
-                        
-                        // Create translation group for lessons
-                        $lesson_trid = apply_filters('wpml_element_trid', null, $english_lesson->ID, 'post_lesson');
-                        if (!$lesson_trid) {
-                            do_action('wpml_set_element_language_details', array(
-                                'element_id' => $english_lesson->ID,
-                                'element_type' => 'post_lesson',
-                                'language_code' => 'en',
-                                'source_language_code' => null
-                            ));
-                            $lesson_trid = apply_filters('wpml_element_trid', null, $english_lesson->ID, 'post_lesson');
-                        }
-                        
-                        // Connect Urdu lesson as translation
-                        do_action('wpml_set_element_language_details', array(
-                            'element_id' => $urdu_lesson->ID,
-                            'element_type' => 'post_lesson',
-                            'language_code' => 'ur',
-                            'source_language_code' => 'en',
-                            'trid' => $lesson_trid
-                        ));
-                        
-                        $results[] = '  Connected lessons: "' . $english_lesson->post_title . '" ↔ "' . $urdu_lesson->post_title . '"';
-                    }
-                }
-                
-            } else {
-                $results[] = 'Could not find expected courses (English ID: 260, Urdu ID: 261)';
+                // Now fix sections and lessons
+                $this->fix_course_hierarchy($en_course['id'], $target_course['id'], $target_lang, $results);
             }
-        } else {
-            $results[] = 'WPML not active - no language relationships to fix';
         }
+        
+        $results[] = '';
+        $results[] = '🎉 RELATIONSHIP FIXING COMPLETED!';
+        $results[] = '================================';
         
         // Fix LifterLMS relationships (lessons, quizzes, etc.)
         $results[] = 'Checking LifterLMS relationships...';
