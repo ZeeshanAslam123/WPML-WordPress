@@ -199,6 +199,7 @@
             statsHtml += '<ul>';
             statsHtml += '<li>Courses Processed: ' + stats.courses_processed + '</li>';
             statsHtml += '<li>Relationships Fixed: ' + stats.relationships_fixed + '</li>';
+            statsHtml += '<li>Sections Synced: ' + stats.sections_synced + '</li>';
             statsHtml += '<li>Lessons Synced: ' + stats.lessons_synced + '</li>';
             statsHtml += '<li>Enrollments Synced: ' + stats.enrollments_synced + '</li>';
             if (stats.errors > 0) {

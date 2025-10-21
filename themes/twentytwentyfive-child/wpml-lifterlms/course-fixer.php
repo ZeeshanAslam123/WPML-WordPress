@@ -19,6 +19,7 @@ class WPML_LLMS_Course_Fixer {
     private $stats = array(
         'courses_processed' => 0,
         'relationships_fixed' => 0,
+        'sections_synced' => 0,
         'lessons_synced' => 0,
         'errors' => 0
     );
@@ -37,6 +38,7 @@ class WPML_LLMS_Course_Fixer {
         $this->stats = array(
             'courses_processed' => 0,
             'relationships_fixed' => 0,
+            'sections_synced' => 0,
             'lessons_synced' => 0,
             'enrollments_synced' => 0,
             'errors' => 0,
@@ -66,6 +68,9 @@ class WPML_LLMS_Course_Fixer {
             
             // Fix WPML relationships
             $this->fix_wpml_relationships($course_id, $translations);
+            
+            // Sync course sections
+            $this->sync_course_sections($course_id, $translations);
             
             // Sync course lessons
             $this->sync_course_lessons($course_id, $translations);
@@ -182,6 +187,51 @@ class WPML_LLMS_Course_Fixer {
     }
     
     /**
+     * Sync course sections
+     */
+    private function sync_course_sections($course_id, $translations) {
+        $this->log('Syncing course sections...', 'info');
+        
+        if (!class_exists('LLMS_Course')) {
+            $this->log('LifterLMS not available', 'warning');
+            return;
+        }
+        
+        $main_course = new LLMS_Course($course_id);
+        $main_sections = $main_course->get_sections('ids');
+        
+        if (empty($main_sections)) {
+            $this->log('No sections found in main course', 'info');
+            return;
+        }
+        
+        foreach ($translations as $lang_code => $translation) {
+            $this->log('Processing sections for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
+            
+            // Sync section relationships
+            foreach ($main_sections as $section_id) {
+                $translated_section_id = apply_filters('wpml_object_id', $section_id, 'section', false, $lang_code);
+                
+                if ($translated_section_id && $translated_section_id !== $section_id) {
+                    // Fix section → course relationship
+                    $current_parent_course = get_post_meta($translated_section_id, '_llms_parent_course', true);
+                    if ($current_parent_course != $translation['id']) {
+                        update_post_meta($translated_section_id, '_llms_parent_course', $translation['id']);
+                        $this->log('Fixed section ' . $translated_section_id . ' parent course to ' . $translation['id'], 'success');
+                        $this->stats['sections_synced']++;
+                    } else {
+                        $this->log('Section ' . $translated_section_id . ' already has correct parent course', 'info');
+                    }
+                } else {
+                    $this->log('No translation found for section ' . $section_id . ' in ' . $lang_code, 'warning');
+                }
+            }
+            
+            $this->log('Completed section sync for ' . $translation['title'], 'success');
+        }
+    }
+    
+    /**
      * Sync course lessons
      */
     private function sync_course_lessons($course_id, $translations) {
@@ -201,21 +251,48 @@ class WPML_LLMS_Course_Fixer {
         }
         
         foreach ($translations as $lang_code => $translation) {
-            $translated_course = new LLMS_Course($translation['id']);
-            $translated_lessons = $translated_course->get_lessons('ids');
+            $this->log('Processing lessons for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
             
             // Sync lesson relationships
             foreach ($main_lessons as $lesson_id) {
                 $translated_lesson_id = apply_filters('wpml_object_id', $lesson_id, 'lesson', false, $lang_code);
                 
                 if ($translated_lesson_id && $translated_lesson_id !== $lesson_id) {
-                    // Ensure lesson is properly associated with translated course
-                    update_post_meta($translated_lesson_id, '_llms_parent_course', $translation['id']);
+                    // Fix lesson → course relationship
+                    $current_parent_course = get_post_meta($translated_lesson_id, '_llms_parent_course', true);
+                    if ($current_parent_course != $translation['id']) {
+                        update_post_meta($translated_lesson_id, '_llms_parent_course', $translation['id']);
+                        $this->log('Fixed lesson ' . $translated_lesson_id . ' parent course to ' . $translation['id'], 'success');
+                    }
+                    
+                    // Fix lesson → section relationship
+                    $main_lesson_section = get_post_meta($lesson_id, '_llms_parent_section', true);
+                    if ($main_lesson_section) {
+                        // Find the translated section
+                        $translated_section_id = apply_filters('wpml_object_id', $main_lesson_section, 'section', false, $lang_code);
+                        
+                        if ($translated_section_id && $translated_section_id !== $main_lesson_section) {
+                            $current_parent_section = get_post_meta($translated_lesson_id, '_llms_parent_section', true);
+                            if ($current_parent_section != $translated_section_id) {
+                                update_post_meta($translated_lesson_id, '_llms_parent_section', $translated_section_id);
+                                $this->log('Fixed lesson ' . $translated_lesson_id . ' parent section to ' . $translated_section_id, 'success');
+                            } else {
+                                $this->log('Lesson ' . $translated_lesson_id . ' already has correct parent section', 'info');
+                            }
+                        } else {
+                            $this->log('No translated section found for lesson ' . $translated_lesson_id, 'warning');
+                        }
+                    } else {
+                        $this->log('Main lesson ' . $lesson_id . ' has no parent section', 'info');
+                    }
+                    
                     $this->stats['lessons_synced']++;
+                } else {
+                    $this->log('No translation found for lesson ' . $lesson_id . ' in ' . $lang_code, 'warning');
                 }
             }
             
-            $this->log('Synced lessons for ' . $translation['title'], 'success');
+            $this->log('Completed lesson sync for ' . $translation['title'], 'success');
         }
     }
     
