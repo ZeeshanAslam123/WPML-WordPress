@@ -222,6 +222,20 @@ class WPML_LLMS_Course_Fixer {
                     } else {
                         $this->log('Section ' . $translated_section_id . ' already has correct parent course', 'info');
                     }
+                    
+                    // Fix section order meta key (critical for LifterLMS to find sections)
+                    $main_section_order = get_post_meta($section_id, '_llms_order', true);
+                    if ($main_section_order) {
+                        $current_section_order = get_post_meta($translated_section_id, '_llms_order', true);
+                        if ($current_section_order != $main_section_order) {
+                            update_post_meta($translated_section_id, '_llms_order', $main_section_order);
+                            $this->log('Fixed section ' . $translated_section_id . ' order meta to ' . $main_section_order, 'success');
+                        } else {
+                            $this->log('Section ' . $translated_section_id . ' already has correct order meta', 'info');
+                        }
+                    } else {
+                        $this->log('Main section ' . $section_id . ' has no order meta', 'warning');
+                    }
                 } else {
                     $this->log('No translation found for section ' . $section_id . ' in ' . $lang_code, 'warning');
                 }
@@ -284,6 +298,20 @@ class WPML_LLMS_Course_Fixer {
                         }
                     } else {
                         $this->log('Main lesson ' . $lesson_id . ' has no parent section', 'info');
+                    }
+                    
+                    // Fix lesson order meta key (critical for LifterLMS ordering)
+                    $main_lesson_order = get_post_meta($lesson_id, '_llms_order', true);
+                    if ($main_lesson_order) {
+                        $current_lesson_order = get_post_meta($translated_lesson_id, '_llms_order', true);
+                        if ($current_lesson_order != $main_lesson_order) {
+                            update_post_meta($translated_lesson_id, '_llms_order', $main_lesson_order);
+                            $this->log('Fixed lesson ' . $translated_lesson_id . ' order meta to ' . $main_lesson_order, 'success');
+                        } else {
+                            $this->log('Lesson ' . $translated_lesson_id . ' already has correct order meta', 'info');
+                        }
+                    } else {
+                        $this->log('Main lesson ' . $lesson_id . ' has no order meta', 'warning');
                     }
                     
                     $this->stats['lessons_synced']++;
