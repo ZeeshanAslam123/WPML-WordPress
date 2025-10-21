@@ -171,20 +171,21 @@ class WPML_LifterLMS_Compatibility {
                         <select id="course-selector" class="course-selector" style="min-width: 400px; padding: 10px; font-size: 14px;">
                             <option value=""><?php echo esc_html__('Select a course...', 'wpml-lifterlms-compatibility'); ?></option>
                             <?php
-                            // Load courses directly with PHP (not AJAX) to avoid LifterLMS compatibility issues
-                            if (isset($this->components['course_fixer'])) {
-                                // Use the course fixer's method to avoid duplication
-                                $course_fixer = $this->components['course_fixer'];
-                                $english_courses = $course_fixer->get_english_courses_for_admin();
-                                if (!empty($english_courses)) {
-                                    foreach ($english_courses as $course) {
-                                        echo '<option value="' . esc_attr($course['id']) . '">' . esc_html($course['title']) . '</option>';
-                                    }
-                                } else {
-                                    echo '<option value="" disabled>' . esc_html__('No English courses found', 'wpml-lifterlms-compatibility') . '</option>';
+                            // Simple direct course loading - no dependencies
+                            $courses = get_posts(array(
+                                'post_type' => 'course',
+                                'post_status' => 'publish',
+                                'numberposts' => -1,
+                                'orderby' => 'title',
+                                'order' => 'ASC'
+                            ));
+                            
+                            if (!empty($courses)) {
+                                foreach ($courses as $course) {
+                                    echo '<option value="' . esc_attr($course->ID) . '">' . esc_html($course->post_title . ' (ID: ' . $course->ID . ')') . '</option>';
                                 }
                             } else {
-                                echo '<option value="" disabled>' . esc_html__('Course fixer not loaded', 'wpml-lifterlms-compatibility') . '</option>';
+                                echo '<option value="" disabled>' . esc_html__('No courses found', 'wpml-lifterlms-compatibility') . '</option>';
                             }
                             ?>
                         </select>
