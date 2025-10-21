@@ -834,68 +834,140 @@ class WPML_LifterLMS_Compatibility {
                 ));
                 $results[] = 'Connected Urdu course as translation of English course';
                 
-                // Now fix lesson relationships
-                $results[] = 'Fixing lesson relationships...';
+                // Now fix SECTION relationships first
+                $results[] = 'Fixing section relationships...';
                 
-                // Get lessons for English course
-                $english_lessons = get_posts(array(
-                    'post_type' => 'lesson',
+                // Get sections for English course
+                $english_sections = get_posts(array(
+                    'post_type' => 'section',
                     'meta_key' => '_llms_parent_course',
                     'meta_value' => $english_course_id,
-                    'numberposts' => -1
+                    'numberposts' => -1,
+                    'orderby' => 'menu_order',
+                    'order' => 'ASC'
                 ));
                 
-                // Get lessons for Urdu course
-                $urdu_lessons = get_posts(array(
-                    'post_type' => 'lesson',
+                // Get sections for Urdu course
+                $urdu_sections = get_posts(array(
+                    'post_type' => 'section',
                     'meta_key' => '_llms_parent_course',
                     'meta_value' => $urdu_course_id,
-                    'numberposts' => -1
+                    'numberposts' => -1,
+                    'orderby' => 'menu_order',
+                    'order' => 'ASC'
                 ));
                 
-                $results[] = 'English course has ' . count($english_lessons) . ' lessons';
-                $results[] = 'Urdu course has ' . count($urdu_lessons) . ' lessons';
+                $results[] = 'English course has ' . count($english_sections) . ' sections';
+                $results[] = 'Urdu course has ' . count($urdu_sections) . ' sections';
                 
-                // Connect lessons as translations (assuming they are in the same order)
-                for ($i = 0; $i < min(count($english_lessons), count($urdu_lessons)); $i++) {
-                    $english_lesson = $english_lessons[$i];
-                    $urdu_lesson = $urdu_lessons[$i];
+                // Connect sections as translations
+                for ($i = 0; $i < min(count($english_sections), count($urdu_sections)); $i++) {
+                    $english_section = $english_sections[$i];
+                    $urdu_section = $urdu_sections[$i];
                     
-                    // Set lesson languages
+                    // Set section languages
                     do_action('wpml_set_element_language_details', array(
-                        'element_id' => $english_lesson->ID,
-                        'element_type' => 'post_lesson',
+                        'element_id' => $english_section->ID,
+                        'element_type' => 'post_section',
                         'language_code' => 'en'
                     ));
                     
                     do_action('wpml_set_element_language_details', array(
-                        'element_id' => $urdu_lesson->ID,
-                        'element_type' => 'post_lesson',
+                        'element_id' => $urdu_section->ID,
+                        'element_type' => 'post_section',
                         'language_code' => 'ur'
                     ));
                     
-                    // Get or create translation group for lessons
-                    $lesson_trid = apply_filters('wpml_element_trid', null, $english_lesson->ID, 'post_lesson');
-                    if (!$lesson_trid) {
+                    // Create translation group for sections
+                    $section_trid = apply_filters('wpml_element_trid', null, $english_section->ID, 'post_section');
+                    if (!$section_trid) {
                         do_action('wpml_set_element_language_details', array(
-                            'element_id' => $english_lesson->ID,
-                            'element_type' => 'post_lesson',
+                            'element_id' => $english_section->ID,
+                            'element_type' => 'post_section',
                             'language_code' => 'en',
                             'source_language_code' => null
                         ));
-                        $lesson_trid = apply_filters('wpml_element_trid', null, $english_lesson->ID, 'post_lesson');
+                        $section_trid = apply_filters('wpml_element_trid', null, $english_section->ID, 'post_section');
                     }
                     
-                    // Connect Urdu lesson as translation
+                    // Connect Urdu section as translation
                     do_action('wpml_set_element_language_details', array(
-                        'element_id' => $urdu_lesson->ID,
-                        'element_type' => 'post_lesson',
+                        'element_id' => $urdu_section->ID,
+                        'element_type' => 'post_section',
                         'language_code' => 'ur',
                         'source_language_code' => 'en',
-                        'trid' => $lesson_trid
+                        'trid' => $section_trid
                     ));
                     
-                    $results[] = 'Connected lessons: "' . $english_lesson->post_title . '" ↔ "' . $urdu_lesson->post_title . '"';
+                    $results[] = 'Connected sections: "' . $english_section->post_title . '" ↔ "' . $urdu_section->post_title . '"';
+                    
+                    // Now fix lessons within this section
+                    $results[] = 'Fixing lessons for section: ' . $english_section->post_title;
+                    
+                    // Get lessons for this English section
+                    $english_section_lessons = get_posts(array(
+                        'post_type' => 'lesson',
+                        'meta_key' => '_llms_parent_section',
+                        'meta_value' => $english_section->ID,
+                        'numberposts' => -1,
+                        'orderby' => 'menu_order',
+                        'order' => 'ASC'
+                    ));
+                    
+                    // Get lessons for this Urdu section
+                    $urdu_section_lessons = get_posts(array(
+                        'post_type' => 'lesson',
+                        'meta_key' => '_llms_parent_section',
+                        'meta_value' => $urdu_section->ID,
+                        'numberposts' => -1,
+                        'orderby' => 'menu_order',
+                        'order' => 'ASC'
+                    ));
+                    
+                    $results[] = '  English section has ' . count($english_section_lessons) . ' lessons';
+                    $results[] = '  Urdu section has ' . count($urdu_section_lessons) . ' lessons';
+                    
+                    // Connect lessons within this section
+                    for ($j = 0; $j < min(count($english_section_lessons), count($urdu_section_lessons)); $j++) {
+                        $english_lesson = $english_section_lessons[$j];
+                        $urdu_lesson = $urdu_section_lessons[$j];
+                        
+                        // Set lesson languages
+                        do_action('wpml_set_element_language_details', array(
+                            'element_id' => $english_lesson->ID,
+                            'element_type' => 'post_lesson',
+                            'language_code' => 'en'
+                        ));
+                        
+                        do_action('wpml_set_element_language_details', array(
+                            'element_id' => $urdu_lesson->ID,
+                            'element_type' => 'post_lesson',
+                            'language_code' => 'ur'
+                        ));
+                        
+                        // Create translation group for lessons
+                        $lesson_trid = apply_filters('wpml_element_trid', null, $english_lesson->ID, 'post_lesson');
+                        if (!$lesson_trid) {
+                            do_action('wpml_set_element_language_details', array(
+                                'element_id' => $english_lesson->ID,
+                                'element_type' => 'post_lesson',
+                                'language_code' => 'en',
+                                'source_language_code' => null
+                            ));
+                            $lesson_trid = apply_filters('wpml_element_trid', null, $english_lesson->ID, 'post_lesson');
+                        }
+                        
+                        // Connect Urdu lesson as translation
+                        do_action('wpml_set_element_language_details', array(
+                            'element_id' => $urdu_lesson->ID,
+                            'element_type' => 'post_lesson',
+                            'language_code' => 'ur',
+                            'source_language_code' => 'en',
+                            'trid' => $lesson_trid
+                        ));
+                        
+                        $results[] = '  Connected lessons: "' . $english_lesson->post_title . '" ↔ "' . $urdu_lesson->post_title . '"';
+                    }
                 }
                 
             } else {
