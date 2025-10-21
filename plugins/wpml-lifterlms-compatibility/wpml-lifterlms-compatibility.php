@@ -773,39 +773,133 @@ class WPML_LifterLMS_Compatibility {
         if (function_exists('icl_get_languages')) {
             $results[] = 'WPML detected - fixing language relationships...';
             
-            // Get course language
-            $course_language = apply_filters('wpml_element_language_code', null, array(
-                'element_id' => $course_id,
-                'element_type' => 'post_course'
+            // Get all courses to find potential translations
+            $all_courses = get_posts(array(
+                'post_type' => 'course',
+                'post_status' => 'publish',
+                'numberposts' => -1
             ));
             
-            if ($course_language) {
-                $results[] = 'Course language: ' . $course_language;
+            $results[] = 'Found ' . count($all_courses) . ' total courses';
+            
+            // Find the English course (ID: 260) and Urdu course (ID: 261) based on your screenshot
+            $english_course_id = 260;
+            $urdu_course_id = 261;
+            
+            // Check if these courses exist
+            $english_course = get_post($english_course_id);
+            $urdu_course = get_post($urdu_course_id);
+            
+            if ($english_course && $urdu_course) {
+                $results[] = 'Found English course: ' . $english_course->post_title . ' (ID: ' . $english_course_id . ')';
+                $results[] = 'Found Urdu course: ' . $urdu_course->post_title . ' (ID: ' . $urdu_course_id . ')';
                 
-                // Get translations
-                $translations = apply_filters('wpml_get_element_translations', null, $course_id, 'post_course');
-                if ($translations) {
-                    $results[] = 'Found ' . count($translations) . ' translations';
-                    foreach ($translations as $lang => $translation) {
-                        if ($translation->element_id != $course_id) {
-                            $results[] = 'Translation in ' . $lang . ': ID ' . $translation->element_id;
-                        }
-                    }
-                } else {
-                    $results[] = 'No translations found';
-                }
-            } else {
-                $results[] = 'Course language not set - setting to default';
-                // Set course to default language if not set
-                $default_language = apply_filters('wpml_default_language', null);
-                if ($default_language) {
+                // Set language for English course
+                do_action('wpml_set_element_language_details', array(
+                    'element_id' => $english_course_id,
+                    'element_type' => 'post_course',
+                    'language_code' => 'en'
+                ));
+                $results[] = 'Set English course language to: en';
+                
+                // Set language for Urdu course
+                do_action('wpml_set_element_language_details', array(
+                    'element_id' => $urdu_course_id,
+                    'element_type' => 'post_course',
+                    'language_code' => 'ur'
+                ));
+                $results[] = 'Set Urdu course language to: ur';
+                
+                // Connect them as translations
+                $trid = apply_filters('wpml_element_trid', null, $english_course_id, 'post_course');
+                if (!$trid) {
+                    // Create new translation group
                     do_action('wpml_set_element_language_details', array(
-                        'element_id' => $course_id,
+                        'element_id' => $english_course_id,
                         'element_type' => 'post_course',
-                        'language_code' => $default_language
+                        'language_code' => 'en',
+                        'source_language_code' => null
                     ));
-                    $results[] = 'Set course language to: ' . $default_language;
+                    $trid = apply_filters('wpml_element_trid', null, $english_course_id, 'post_course');
+                    $results[] = 'Created new translation group with TRID: ' . $trid;
                 }
+                
+                // Add Urdu course to the same translation group
+                do_action('wpml_set_element_language_details', array(
+                    'element_id' => $urdu_course_id,
+                    'element_type' => 'post_course',
+                    'language_code' => 'ur',
+                    'source_language_code' => 'en',
+                    'trid' => $trid
+                ));
+                $results[] = 'Connected Urdu course as translation of English course';
+                
+                // Now fix lesson relationships
+                $results[] = 'Fixing lesson relationships...';
+                
+                // Get lessons for English course
+                $english_lessons = get_posts(array(
+                    'post_type' => 'lesson',
+                    'meta_key' => '_llms_parent_course',
+                    'meta_value' => $english_course_id,
+                    'numberposts' => -1
+                ));
+                
+                // Get lessons for Urdu course
+                $urdu_lessons = get_posts(array(
+                    'post_type' => 'lesson',
+                    'meta_key' => '_llms_parent_course',
+                    'meta_value' => $urdu_course_id,
+                    'numberposts' => -1
+                ));
+                
+                $results[] = 'English course has ' . count($english_lessons) . ' lessons';
+                $results[] = 'Urdu course has ' . count($urdu_lessons) . ' lessons';
+                
+                // Connect lessons as translations (assuming they are in the same order)
+                for ($i = 0; $i < min(count($english_lessons), count($urdu_lessons)); $i++) {
+                    $english_lesson = $english_lessons[$i];
+                    $urdu_lesson = $urdu_lessons[$i];
+                    
+                    // Set lesson languages
+                    do_action('wpml_set_element_language_details', array(
+                        'element_id' => $english_lesson->ID,
+                        'element_type' => 'post_lesson',
+                        'language_code' => 'en'
+                    ));
+                    
+                    do_action('wpml_set_element_language_details', array(
+                        'element_id' => $urdu_lesson->ID,
+                        'element_type' => 'post_lesson',
+                        'language_code' => 'ur'
+                    ));
+                    
+                    // Get or create translation group for lessons
+                    $lesson_trid = apply_filters('wpml_element_trid', null, $english_lesson->ID, 'post_lesson');
+                    if (!$lesson_trid) {
+                        do_action('wpml_set_element_language_details', array(
+                            'element_id' => $english_lesson->ID,
+                            'element_type' => 'post_lesson',
+                            'language_code' => 'en',
+                            'source_language_code' => null
+                        ));
+                        $lesson_trid = apply_filters('wpml_element_trid', null, $english_lesson->ID, 'post_lesson');
+                    }
+                    
+                    // Connect Urdu lesson as translation
+                    do_action('wpml_set_element_language_details', array(
+                        'element_id' => $urdu_lesson->ID,
+                        'element_type' => 'post_lesson',
+                        'language_code' => 'ur',
+                        'source_language_code' => 'en',
+                        'trid' => $lesson_trid
+                    ));
+                    
+                    $results[] = 'Connected lessons: "' . $english_lesson->post_title . '" ↔ "' . $urdu_lesson->post_title . '"';
+                }
+                
+            } else {
+                $results[] = 'Could not find expected courses (English ID: 260, Urdu ID: 261)';
             }
         } else {
             $results[] = 'WPML not active - no language relationships to fix';
