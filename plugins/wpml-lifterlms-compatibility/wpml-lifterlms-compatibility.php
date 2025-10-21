@@ -133,32 +133,19 @@ class WPML_LifterLMS_Compatibility {
     }
     
     /**
-     * Add admin menu directly - simple and reliable
+     * Add admin menu directly - MAIN MENU ONLY (no submenu)
      */
     public function add_admin_menu_direct() {
-        // Try to add as WPML submenu first, fallback to standalone menu
-        if (defined('ICL_SITEPRESS_VERSION') && function_exists('icl_get_languages')) {
-            // Add as WPML submenu if WPML is active
-            $hook = add_submenu_page(
-                'sitepress-multilingual-cms/menu/languages.php',
-                __('LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
-                __('LifterLMS', 'wpml-lifterlms-compatibility'),
-                'manage_options',
-                'wpml-lifterlms-compatibility',
-                array($this, 'render_admin_page_direct')
-            );
-        } else {
-            // Add as standalone menu if WPML is not active or accessible
-            $hook = add_menu_page(
-                __('WPML LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
-                __('WPML LifterLMS', 'wpml-lifterlms-compatibility'),
-                'manage_options',
-                'wpml-lifterlms-compatibility',
-                array($this, 'render_admin_page_direct'),
-                'dashicons-translation',
-                30
-            );
-        }
+        // Always add as standalone main menu (no submenu)
+        $hook = add_menu_page(
+            __('WPML LifterLMS Compatibility', 'wpml-lifterlms-compatibility'),
+            __('WPML LifterLMS', 'wpml-lifterlms-compatibility'),
+            'manage_options',
+            'wpml-lifterlms-compatibility',
+            array($this, 'render_admin_page_direct'),
+            'dashicons-translation',
+            30
+        );
         
         // Store hook for asset loading
         $this->admin_page_hook = $hook;
@@ -230,6 +217,43 @@ class WPML_LifterLMS_Compatibility {
                 </ul>
             </div>
             
+            <?php if (defined('ICL_SITEPRESS_VERSION') && defined('LLMS_PLUGIN_FILE')): ?>
+            <!-- COURSE RELATIONSHIP FIXER SECTION -->
+            <div class="card">
+                <h2><?php echo esc_html__('🔧 Course Relationship Fixer', 'wpml-lifterlms-compatibility'); ?></h2>
+                <p><?php echo esc_html__('Fix WPML-LifterLMS course relationships after translating content. Select an English course and click "Fix Relationships" to automatically sync all related content (sections, lessons, quizzes, etc.) with their translations.', 'wpml-lifterlms-compatibility'); ?></p>
+                
+                <div class="wpml-llms-fixer-controls" style="margin: 20px 0;">
+                    <div class="control-group" style="margin-bottom: 15px;">
+                        <label for="course-selector" style="display: block; margin-bottom: 5px; font-weight: bold;"><?php echo esc_html__('Select English Course:', 'wpml-lifterlms-compatibility'); ?></label>
+                        <select id="course-selector" class="course-selector" style="min-width: 300px; padding: 8px;">
+                            <option value=""><?php echo esc_html__('Loading courses...', 'wpml-lifterlms-compatibility'); ?></option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group" style="margin-bottom: 15px;">
+                        <button type="button" id="fix-relationships-btn" class="button button-primary button-large" disabled>
+                            <?php echo esc_html__('Fix Relationships', 'wpml-lifterlms-compatibility'); ?>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="wpml-llms-fixer-progress" id="fixer-progress" style="display: none; margin: 20px 0;">
+                    <div class="progress-bar" style="background: #f0f0f0; border-radius: 4px; height: 20px; overflow: hidden;">
+                        <div class="progress-fill" id="progress-fill" style="background: #0073aa; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text" style="margin-top: 10px; font-weight: bold;"></div>
+                </div>
+                
+                <div class="wpml-llms-fixer-logs" id="fixer-logs" style="margin-top: 20px;">
+                    <h3 style="margin-bottom: 10px;"><?php echo esc_html__('Logs & Details', 'wpml-lifterlms-compatibility'); ?></h3>
+                    <div class="logs-container" id="logs-container" style="background: #f9f9f9; border: 1px solid #ddd; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.4;">
+                        <p style="color: #666; margin: 0;"><?php echo esc_html__('Logs will appear here when you run the relationship fixer...', 'wpml-lifterlms-compatibility'); ?></p>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+            
             <?php if (!defined('ICL_SITEPRESS_VERSION') || !defined('LLMS_PLUGIN_FILE')): ?>
             <div class="notice notice-warning">
                 <p><strong><?php echo esc_html__('⚠️ Missing Dependencies', 'wpml-lifterlms-compatibility'); ?></strong></p>
@@ -260,6 +284,121 @@ class WPML_LifterLMS_Compatibility {
             margin: 5px 0;
         }
         </style>
+        
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Load courses on page load
+            loadEnglishCourses();
+            
+            // Handle fix button click
+            $('#fix-relationships-btn').on('click', function() {
+                var courseId = $('#course-selector').val();
+                if (!courseId) {
+                    alert('<?php echo esc_js(__('Please select a course', 'wpml-lifterlms-compatibility')); ?>');
+                    return;
+                }
+                fixCourseRelationships(courseId);
+            });
+            
+            // Enable/disable fix button based on course selection
+            $('#course-selector').on('change', function() {
+                $('#fix-relationships-btn').prop('disabled', !$(this).val());
+            });
+            
+            function loadEnglishCourses() {
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'wpml_llms_get_english_courses',
+                        nonce: '<?php echo wp_create_nonce('wpml_llms_course_fixer'); ?>'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            var $selector = $('#course-selector');
+                            $selector.empty();
+                            $selector.append('<option value=""><?php echo esc_js(__('Select a course...', 'wpml-lifterlms-compatibility')); ?></option>');
+                            
+                            if (response.data.courses && response.data.courses.length > 0) {
+                                $.each(response.data.courses, function(index, course) {
+                                    $selector.append('<option value="' + course.id + '">' + course.title + '</option>');
+                                });
+                            } else {
+                                $selector.append('<option value="" disabled><?php echo esc_js(__('No English courses found', 'wpml-lifterlms-compatibility')); ?></option>');
+                            }
+                        } else {
+                            $('#course-selector').html('<option value="" disabled><?php echo esc_js(__('Error loading courses', 'wpml-lifterlms-compatibility')); ?></option>');
+                        }
+                    },
+                    error: function() {
+                        $('#course-selector').html('<option value="" disabled><?php echo esc_js(__('Error loading courses', 'wpml-lifterlms-compatibility')); ?></option>');
+                    }
+                });
+            }
+            
+            function fixCourseRelationships(courseId) {
+                var $button = $('#fix-relationships-btn');
+                var $progress = $('#fixer-progress');
+                var $progressFill = $('#progress-fill');
+                var $progressText = $('#progress-text');
+                var $logsContainer = $('#logs-container');
+                
+                // Reset UI
+                $button.prop('disabled', true).text('<?php echo esc_js(__('Fixing Relationships...', 'wpml-lifterlms-compatibility')); ?>');
+                $progress.show();
+                $progressFill.css('width', '0%');
+                $progressText.text('<?php echo esc_js(__('Starting relationship fix...', 'wpml-lifterlms-compatibility')); ?>');
+                $logsContainer.html('<p style="color: #0073aa; margin: 0;"><?php echo esc_js(__('Starting relationship fix process...', 'wpml-lifterlms-compatibility')); ?></p>');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'wpml_llms_fix_course_relationships',
+                        course_id: courseId,
+                        nonce: '<?php echo wp_create_nonce('wpml_llms_course_fixer'); ?>'
+                    },
+                    success: function(response) {
+                        $progressFill.css('width', '100%');
+                        
+                        if (response.success) {
+                            $progressText.text('<?php echo esc_js(__('Relationship fixing completed successfully!', 'wpml-lifterlms-compatibility')); ?>');
+                            
+                            // Display logs
+                            var logsHtml = '<div style="color: #008000; margin-bottom: 10px;"><strong><?php echo esc_js(__('✅ Success! Relationships fixed successfully.', 'wpml-lifterlms-compatibility')); ?></strong></div>';
+                            if (response.data.logs && response.data.logs.length > 0) {
+                                $.each(response.data.logs, function(index, log) {
+                                    logsHtml += '<div style="margin: 5px 0; padding: 5px; background: #f0f8ff; border-left: 3px solid #0073aa;">' + log + '</div>';
+                                });
+                            }
+                            if (response.data.summary) {
+                                logsHtml += '<div style="margin-top: 15px; padding: 10px; background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px;"><strong><?php echo esc_js(__('Summary:', 'wpml-lifterlms-compatibility')); ?></strong><br>' + response.data.summary + '</div>';
+                            }
+                            $logsContainer.html(logsHtml);
+                        } else {
+                            $progressText.text('<?php echo esc_js(__('Error occurred during relationship fixing', 'wpml-lifterlms-compatibility')); ?>');
+                            $logsContainer.html('<div style="color: #d63638; margin: 0;"><strong><?php echo esc_js(__('❌ Error:', 'wpml-lifterlms-compatibility')); ?></strong> ' + (response.data ? response.data : '<?php echo esc_js(__('Unknown error occurred', 'wpml-lifterlms-compatibility')); ?>') + '</div>');
+                        }
+                        
+                        // Reset button
+                        setTimeout(function() {
+                            $button.prop('disabled', false).text('<?php echo esc_js(__('Fix Relationships', 'wpml-lifterlms-compatibility')); ?>');
+                        }, 2000);
+                    },
+                    error: function() {
+                        $progressFill.css('width', '100%');
+                        $progressText.text('<?php echo esc_js(__('Network error occurred', 'wpml-lifterlms-compatibility')); ?>');
+                        $logsContainer.html('<div style="color: #d63638; margin: 0;"><strong><?php echo esc_js(__('❌ Network Error:', 'wpml-lifterlms-compatibility')); ?></strong> <?php echo esc_js(__('Could not connect to server', 'wpml-lifterlms-compatibility')); ?></div>');
+                        
+                        // Reset button
+                        setTimeout(function() {
+                            $button.prop('disabled', false).text('<?php echo esc_js(__('Fix Relationships', 'wpml-lifterlms-compatibility')); ?>');
+                        }, 2000);
+                    }
+                });
+            }
+        });
+        </script>
         <?php
     }
     
