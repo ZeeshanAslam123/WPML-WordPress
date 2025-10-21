@@ -266,23 +266,87 @@ trait WPML_LifterLMS_Hierarchy_Fixer {
         $results[] = '🔧 FIXING DATABASE-LEVEL RELATIONSHIPS';
         $results[] = 'Based on your provided database meta...';
         
-        // Your specific IDs from the database meta
-        $english_course_id = 260;
-        $english_section_id = 264;
-        $english_lesson_id = 266;
-        $urdu_section_id = 269;
-        $urdu_lesson_id = 274;
+        // Find the actual course IDs dynamically instead of hardcoding
+        $all_courses = get_posts(array(
+            'post_type' => 'course',
+            'post_status' => 'publish',
+            'numberposts' => -1
+        ));
         
-        // Find the Urdu course ID by checking which course the Urdu lesson belongs to
-        $urdu_course_meta = get_post_meta($urdu_lesson_id, '_llms_parent_course', true);
-        if (!$urdu_course_meta) {
-            // If not found, find it by checking sections
-            $urdu_course_id = 261; // Based on your screenshots
-            $results[] = '🔍 Urdu course ID determined as: ' . $urdu_course_id;
-        } else {
-            $urdu_course_id = $urdu_course_meta;
-            $results[] = '🔍 Found Urdu course ID: ' . $urdu_course_id;
+        $english_course_id = null;
+        $urdu_course_id = null;
+        
+        foreach ($all_courses as $course) {
+            $lang = apply_filters('wpml_element_language_code', null, array(
+                'element_id' => $course->ID,
+                'element_type' => 'post_course'
+            ));
+            
+            if ($lang === 'en') {
+                $english_course_id = $course->ID;
+                $results[] = '🔍 Found English course: "' . $course->post_title . '" (ID: ' . $course->ID . ')';
+            } elseif ($lang === 'ur') {
+                $urdu_course_id = $course->ID;
+                $results[] = '🔍 Found Urdu course: "' . $course->post_title . '" (ID: ' . $course->ID . ')';
+            }
         }
+        
+        if (!$english_course_id || !$urdu_course_id) {
+            $results[] = '❌ Could not find both English and Urdu courses with proper language assignments';
+            return;
+        }
+        
+        // Find sections for each course
+        $english_sections = get_posts(array(
+            'post_type' => 'section',
+            'meta_key' => '_llms_parent_course',
+            'meta_value' => $english_course_id,
+            'numberposts' => 1
+        ));
+        
+        $urdu_sections = get_posts(array(
+            'post_type' => 'section',
+            'meta_key' => '_llms_parent_course',
+            'meta_value' => $urdu_course_id,
+            'numberposts' => 1
+        ));
+        
+        if (empty($english_sections) || empty($urdu_sections)) {
+            $results[] = '❌ Could not find sections for both courses';
+            return;
+        }
+        
+        $english_section_id = $english_sections[0]->ID;
+        $urdu_section_id = $urdu_sections[0]->ID;
+        
+        $results[] = '🔍 Found English section: "' . $english_sections[0]->post_title . '" (ID: ' . $english_section_id . ')';
+        $results[] = '🔍 Found Urdu section: "' . $urdu_sections[0]->post_title . '" (ID: ' . $urdu_section_id . ')';
+        
+        // Find lessons for each section
+        $english_lessons = get_posts(array(
+            'post_type' => 'lesson',
+            'meta_key' => '_llms_parent_section',
+            'meta_value' => $english_section_id,
+            'numberposts' => 1
+        ));
+        
+        $urdu_lessons = get_posts(array(
+            'post_type' => 'lesson',
+            'meta_key' => '_llms_parent_section',
+            'meta_value' => $urdu_section_id,
+            'numberposts' => 1
+        ));
+        
+        if (empty($english_lessons) || empty($urdu_lessons)) {
+            $results[] = '❌ Could not find lessons for both sections';
+            return;
+        }
+        
+        $english_lesson_id = $english_lessons[0]->ID;
+        $urdu_lesson_id = $urdu_lessons[0]->ID;
+        
+        $results[] = '🔍 Found English lesson: "' . $english_lessons[0]->post_title . '" (ID: ' . $english_lesson_id . ')';
+        $results[] = '🔍 Found Urdu lesson: "' . $urdu_lessons[0]->post_title . '" (ID: ' . $urdu_lesson_id . ')';
         
         // Fix 1: Ensure Urdu section has proper parent course relationship
         $results[] = '';
@@ -443,13 +507,79 @@ trait WPML_LifterLMS_Hierarchy_Fixer {
         
         $results[] = '🔍 VERIFYING ALL RELATIONSHIPS...';
         
-        // Check specific IDs from your database
-        $english_course_id = 260;
-        $english_section_id = 264;
-        $english_lesson_id = 266;
-        $urdu_section_id = 269;
-        $urdu_lesson_id = 274;
-        $urdu_course_id = 261;
+        // Find the actual IDs dynamically
+        $all_courses = get_posts(array(
+            'post_type' => 'course',
+            'post_status' => 'publish',
+            'numberposts' => -1
+        ));
+        
+        $english_course_id = null;
+        $urdu_course_id = null;
+        
+        foreach ($all_courses as $course) {
+            $lang = apply_filters('wpml_element_language_code', null, array(
+                'element_id' => $course->ID,
+                'element_type' => 'post_course'
+            ));
+            
+            if ($lang === 'en') {
+                $english_course_id = $course->ID;
+            } elseif ($lang === 'ur') {
+                $urdu_course_id = $course->ID;
+            }
+        }
+        
+        if (!$english_course_id || !$urdu_course_id) {
+            $results[] = '❌ Could not find courses for verification';
+            return;
+        }
+        
+        // Find sections
+        $english_sections = get_posts(array(
+            'post_type' => 'section',
+            'meta_key' => '_llms_parent_course',
+            'meta_value' => $english_course_id,
+            'numberposts' => 1
+        ));
+        
+        $urdu_sections = get_posts(array(
+            'post_type' => 'section',
+            'meta_key' => '_llms_parent_course',
+            'meta_value' => $urdu_course_id,
+            'numberposts' => 1
+        ));
+        
+        if (empty($english_sections) || empty($urdu_sections)) {
+            $results[] = '❌ Could not find sections for verification';
+            return;
+        }
+        
+        $english_section_id = $english_sections[0]->ID;
+        $urdu_section_id = $urdu_sections[0]->ID;
+        
+        // Find lessons
+        $english_lessons = get_posts(array(
+            'post_type' => 'lesson',
+            'meta_key' => '_llms_parent_section',
+            'meta_value' => $english_section_id,
+            'numberposts' => 1
+        ));
+        
+        $urdu_lessons = get_posts(array(
+            'post_type' => 'lesson',
+            'meta_key' => '_llms_parent_section',
+            'meta_value' => $urdu_section_id,
+            'numberposts' => 1
+        ));
+        
+        if (empty($english_lessons) || empty($urdu_lessons)) {
+            $results[] = '❌ Could not find lessons for verification';
+            return;
+        }
+        
+        $english_lesson_id = $english_lessons[0]->ID;
+        $urdu_lesson_id = $urdu_lessons[0]->ID;
         
         // Verify LifterLMS relationships
         $results[] = '';

@@ -55,7 +55,7 @@ class WPML_LifterLMS_Course_Fixer {
         
         // AJAX handlers
         add_action('wp_ajax_wpml_llms_get_english_courses', array($this, 'handle_get_english_courses'));
-        add_action('wp_ajax_wpml_llms_fix_course_relationships', array($this, 'handle_fix_course_relationships'));
+        // REMOVED: Duplicate AJAX handler - using main plugin's handle_fix_course_relationships_simple instead
         
         // Debug: Add admin notice to verify plugin is loading
         if (defined('WP_DEBUG') && WP_DEBUG) {
