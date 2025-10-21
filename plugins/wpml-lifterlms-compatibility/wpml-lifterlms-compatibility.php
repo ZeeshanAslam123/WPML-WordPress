@@ -172,13 +172,19 @@ class WPML_LifterLMS_Compatibility {
                             <option value=""><?php echo esc_html__('Select a course...', 'wpml-lifterlms-compatibility'); ?></option>
                             <?php
                             // Load courses directly with PHP (not AJAX) to avoid LifterLMS compatibility issues
-                            $english_courses = $this->get_english_courses_direct();
-                            if (!empty($english_courses)) {
-                                foreach ($english_courses as $course) {
-                                    echo '<option value="' . esc_attr($course['id']) . '">' . esc_html($course['title']) . '</option>';
+                            if (isset($this->components['course_fixer'])) {
+                                // Use the course fixer's method to avoid duplication
+                                $course_fixer = $this->components['course_fixer'];
+                                $english_courses = $course_fixer->get_english_courses_for_admin();
+                                if (!empty($english_courses)) {
+                                    foreach ($english_courses as $course) {
+                                        echo '<option value="' . esc_attr($course['id']) . '">' . esc_html($course['title']) . '</option>';
+                                    }
+                                } else {
+                                    echo '<option value="" disabled>' . esc_html__('No English courses found', 'wpml-lifterlms-compatibility') . '</option>';
                                 }
                             } else {
-                                echo '<option value="" disabled>' . esc_html__('No English courses found', 'wpml-lifterlms-compatibility') . '</option>';
+                                echo '<option value="" disabled>' . esc_html__('Course fixer not loaded', 'wpml-lifterlms-compatibility') . '</option>';
                             }
                             ?>
                         </select>
@@ -371,6 +377,7 @@ class WPML_LifterLMS_Compatibility {
                 $.ajax({
                     url: ajaxurl,
                     type: 'POST',
+                    timeout: 30000, // 30 second timeout
                     data: {
                         action: 'wpml_llms_fix_course_relationships',
                         course_id: courseId,
@@ -403,10 +410,20 @@ class WPML_LifterLMS_Compatibility {
                             $button.prop('disabled', false).text('<?php echo esc_js(__('Fix Relationships', 'wpml-lifterlms-compatibility')); ?>');
                         }, 2000);
                     },
-                    error: function() {
+                    error: function(xhr, status, error) {
+                        console.log('AJAX Error Details:', {xhr: xhr, status: status, error: error, responseText: xhr.responseText});
+                        
                         $progressFill.css('width', '100%');
                         $progressText.text('<?php echo esc_js(__('Network error occurred', 'wpml-lifterlms-compatibility')); ?>');
-                        $logsContainer.html('<div style="color: #d63638; margin: 0;"><strong><?php echo esc_js(__('❌ Network Error:', 'wpml-lifterlms-compatibility')); ?></strong> <?php echo esc_js(__('Could not connect to server', 'wpml-lifterlms-compatibility')); ?></div>');
+                        
+                        var errorMsg = '<?php echo esc_js(__('Could not connect to server', 'wpml-lifterlms-compatibility')); ?>';
+                        if (status === 'timeout') {
+                            errorMsg = '<?php echo esc_js(__('Request timed out - server may be slow', 'wpml-lifterlms-compatibility')); ?>';
+                        } else if (xhr.responseText) {
+                            errorMsg = '<?php echo esc_js(__('Server error: ', 'wpml-lifterlms-compatibility')); ?>' + xhr.responseText.substring(0, 200);
+                        }
+                        
+                        $logsContainer.html('<div style="color: #d63638; margin: 0;"><strong><?php echo esc_js(__('❌ Network Error:', 'wpml-lifterlms-compatibility')); ?></strong> ' + errorMsg + '<br><small><?php echo esc_js(__('Check browser console for more details.', 'wpml-lifterlms-compatibility')); ?></small></div>');
                         
                         // Reset button
                         setTimeout(function() {
@@ -718,90 +735,7 @@ class WPML_LifterLMS_Compatibility {
         }
     }
     
-    /**
-     * Get English courses directly (not via AJAX) to avoid LifterLMS compatibility issues
-     */
-    public function get_english_courses_direct() {
-        $debug_info = array();
-        
-        // Check if course post type exists (more reliable than checking LifterLMS functions)
-        $post_types = get_post_types();
-        if (!in_array('course', $post_types)) {
-            $debug_info[] = 'Course post type not registered';
-            error_log('WPML-LifterLMS Debug: ' . implode(' | ', $debug_info));
-            return array();
-        }
-        
-        $debug_info[] = 'Course post type is registered';
-        
-        // First, let's try to get ALL courses without any filtering
-        $all_courses = get_posts(array(
-            'post_type' => 'course',
-            'post_status' => 'publish',
-            'numberposts' => -1
-        ));
-        
-        $debug_info[] = 'Total courses found: ' . count($all_courses);
-        
-        if (empty($all_courses)) {
-            // No courses at all - let's check if the post type exists
-            $post_types = get_post_types();
-            $debug_info[] = 'Course post type exists: ' . (in_array('course', $post_types) ? 'YES' : 'NO');
-            
-            // Let's also check for any LifterLMS courses with different status
-            $all_courses_any_status = get_posts(array(
-                'post_type' => 'course',
-                'post_status' => 'any',
-                'numberposts' => -1
-            ));
-            $debug_info[] = 'Courses with any status: ' . count($all_courses_any_status);
-            
-            error_log('WPML-LifterLMS Debug: ' . implode(' | ', $debug_info));
-            return array();
-        }
-        
-        // Log details about found courses
-        foreach ($all_courses as $course) {
-            $debug_info[] = 'Course: ' . $course->post_title . ' (ID: ' . $course->ID . ', Status: ' . $course->post_status . ')';
-        }
-        
-        // Now let's check WPML integration
-        $wpml_active = function_exists('icl_get_languages');
-        $debug_info[] = 'WPML active: ' . ($wpml_active ? 'YES' : 'NO');
-        
-        if ($wpml_active) {
-            // Check language details for each course
-            $english_courses = array();
-            foreach ($all_courses as $course) {
-                $lang = apply_filters('wpml_post_language_details', null, $course->ID);
-                $debug_info[] = 'Course ' . $course->ID . ' language: ' . ($lang ? $lang['language_code'] : 'UNKNOWN');
-                
-                if ($lang && $lang['language_code'] === 'en') {
-                    $english_courses[] = $course;
-                }
-            }
-            $courses = $english_courses;
-            $debug_info[] = 'English courses after WPML filtering: ' . count($courses);
-        } else {
-            // No WPML, return all courses
-            $courses = $all_courses;
-            $debug_info[] = 'No WPML - returning all courses';
-        }
-        
-        // Format courses for dropdown
-        $formatted_courses = array();
-        foreach ($courses as $course) {
-            $formatted_courses[] = array(
-                'id' => $course->ID,
-                'title' => $course->post_title . ' (ID: ' . $course->ID . ')'
-            );
-        }
-        
-        $debug_info[] = 'Final formatted courses: ' . count($formatted_courses);
-        error_log('WPML-LifterLMS Debug: ' . implode(' | ', $debug_info));
-        
-        return $formatted_courses;
-    }
+    // REMOVED: get_english_courses_direct() method - using course fixer's method to avoid duplication
     
     // REMOVED: Duplicate menu methods - using single menu approach in add_admin_menu_direct()
     

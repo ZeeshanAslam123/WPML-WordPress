@@ -179,19 +179,40 @@ class WPML_LifterLMS_Course_Fixer {
      * Handle fix course relationships AJAX request
      */
     public function handle_fix_course_relationships() {
-        check_ajax_referer('wpml_llms_course_fixer', 'nonce');
+        // Add debugging
+        error_log('WPML-LifterLMS: AJAX handler called - handle_fix_course_relationships');
         
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(__('Insufficient permissions', 'wpml-lifterlms-compatibility'));
+        try {
+            check_ajax_referer('wpml_llms_course_fixer', 'nonce');
+            
+            if (!current_user_can('manage_options')) {
+                error_log('WPML-LifterLMS: Insufficient permissions');
+                wp_send_json_error(__('Insufficient permissions', 'wpml-lifterlms-compatibility'));
+            }
+            
+            $course_id = intval($_POST['course_id']);
+            if (!$course_id) {
+                error_log('WPML-LifterLMS: Invalid course ID: ' . print_r($_POST, true));
+                wp_send_json_error(__('Invalid course ID', 'wpml-lifterlms-compatibility'));
+            }
+            
+            error_log('WPML-LifterLMS: Processing course ID: ' . $course_id);
+            $result = $this->fix_course_relationships($course_id);
+            wp_send_json_success($result);
+            
+        } catch (Exception $e) {
+            error_log('WPML-LifterLMS: Exception in AJAX handler: ' . $e->getMessage());
+            wp_send_json_error('Server error: ' . $e->getMessage());
         }
-        
-        $course_id = intval($_POST['course_id']);
-        if (!$course_id) {
-            wp_send_json_error(__('Invalid course ID', 'wpml-lifterlms-compatibility'));
-        }
-        
-        $result = $this->fix_course_relationships($course_id);
-        wp_send_json_success($result);
+    }
+    
+    /**
+     * Get English courses for admin dropdown (public method)
+     * 
+     * @return array
+     */
+    public function get_english_courses_for_admin() {
+        return $this->get_english_courses();
     }
     
     /**
