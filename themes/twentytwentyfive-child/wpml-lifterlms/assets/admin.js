@@ -204,6 +204,7 @@
             statsHtml += '<li>Quizzes Synced: ' + stats.quizzes_synced + '</li>';
             statsHtml += '<li>Questions Synced: ' + stats.questions_synced + '</li>';
             statsHtml += '<li>Quiz Settings Synced: ' + stats.quiz_settings_synced + '</li>';
+            statsHtml += '<li>Access Plans Synced: ' + stats.access_plans_synced + '</li>';
             statsHtml += '<li>Enrollments Synced: ' + stats.enrollments_synced + '</li>';
             if (stats.errors > 0) {
                 statsHtml += '<li class="error">Errors: ' + stats.errors + '</li>';
