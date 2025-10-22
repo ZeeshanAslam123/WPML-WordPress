@@ -549,8 +549,20 @@ class WPML_LLMS_Course_Fixer {
                 continue;
             }
             
-            // Update the meta value
-            update_post_meta($translated_question_id, $meta->meta_key, $meta->meta_value);
+            // Handle serialized data correctly - unserialize first, then let WordPress serialize it properly
+            $value_to_store = $meta->meta_value;
+            
+            // Check if this is a serialized value that needs to be unserialized
+            if (is_serialized($meta->meta_value)) {
+                $unserialized_value = maybe_unserialize($meta->meta_value);
+                if ($unserialized_value !== false) {
+                    $value_to_store = $unserialized_value;
+                    $this->log('Unserializing ' . $meta->meta_key . ' before storing', 'info');
+                }
+            }
+            
+            // Update the meta value - WordPress will serialize arrays automatically
+            update_post_meta($translated_question_id, $meta->meta_key, $value_to_store);
             $synced_choices++;
             
             $this->log('✅ Synced ' . $meta->meta_key . ' for question ' . $translated_question_id, 'success');
@@ -589,8 +601,20 @@ class WPML_LLMS_Course_Fixer {
                 continue;
             }
             
-            // Update the meta value
-            update_post_meta($translated_quiz_id, $meta->meta_key, $meta->meta_value);
+            // Handle serialized data correctly - unserialize first, then let WordPress serialize it properly
+            $value_to_store = $meta->meta_value;
+            
+            // Check if this is a serialized value that needs to be unserialized
+            if (is_serialized($meta->meta_value)) {
+                $unserialized_value = maybe_unserialize($meta->meta_value);
+                if ($unserialized_value !== false) {
+                    $value_to_store = $unserialized_value;
+                    $this->log('Unserializing quiz setting ' . $meta->meta_key . ' before storing', 'info');
+                }
+            }
+            
+            // Update the meta value - WordPress will serialize arrays automatically
+            update_post_meta($translated_quiz_id, $meta->meta_key, $value_to_store);
             $synced_settings++;
             
             $this->log('Synced quiz setting ' . $meta->meta_key . ' for quiz ' . $translated_quiz_id, 'info');
