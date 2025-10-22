@@ -496,6 +496,11 @@ class WPML_LLMS_Course_Fixer {
                             $question_updated = true;
                         }
                         
+                        // Ensure question has correct post_status (LifterLMS requires 'publish')
+                        if ($this->sync_question_post_status($main_question_id, $translated_question_id)) {
+                            $question_updated = true;
+                        }
+                        
                         if ($question_updated) {
                             $this->stats['questions_synced']++;
                         } else {
@@ -669,6 +674,29 @@ class WPML_LLMS_Course_Fixer {
     }
     
     /**
+     * Sync question post_status from source to translated question
+     */
+    private function sync_question_post_status($source_question_id, $translated_question_id) {
+        $source_question = get_post($source_question_id);
+        $translated_question = get_post($translated_question_id);
+        
+        if (!$source_question || !$translated_question) {
+            return false;
+        }
+        
+        if ($source_question->post_status != $translated_question->post_status) {
+            wp_update_post(array(
+                'ID' => $translated_question_id,
+                'post_status' => $source_question->post_status
+            ));
+            $this->log('Updated post_status to ' . $source_question->post_status . ' for question ' . $translated_question_id, 'success');
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
      * Sync quiz questions meta data - the key that LifterLMS uses to store question lists
      */
     private function sync_quiz_questions_meta($main_quiz_id, $translated_quiz_id, $main_questions) {
@@ -729,6 +757,9 @@ class WPML_LLMS_Course_Fixer {
         if (empty($questions)) {
             $this->log('WARNING: Translated quiz ' . $quiz_id . ' (' . $lang_code . ') still has no questions after sync!', 'error');
             
+            // Debug the exact LifterLMS query conditions
+            $this->debug_lifter_lms_query($quiz_id);
+            
             // Try to find questions by _llms_parent_id meta (the actual method LifterLMS uses)
             $meta_questions = get_posts(array(
                 'post_type' => 'llms_question',
@@ -771,6 +802,67 @@ class WPML_LLMS_Course_Fixer {
         } else {
             $this->log('Verified: Translated quiz ' . $quiz_id . ' (' . $lang_code . ') has ' . count($questions) . ' questions', 'success');
         }
+    }
+    
+    /**
+     * Debug the exact LifterLMS query to understand why it fails
+     */
+    private function debug_lifter_lms_query($quiz_id) {
+        global $wpdb;
+        
+        // Replicate the exact LifterLMS query from LLMS_Question_Manager::get_questions
+        $this->log('=== DEBUGGING LIFTER LMS QUERY ===', 'info');
+        
+        // Test the exact query that LifterLMS uses
+        $query_args = array(
+            'meta_query' => array(
+                array(
+                    'key' => '_llms_parent_id',
+                    'value' => $quiz_id,
+                ),
+            ),
+            'order' => 'ASC',
+            'orderby' => 'menu_order',
+            'post_status' => 'publish',
+            'post_type' => 'llms_question',
+            'posts_per_page' => 500,
+        );
+        
+        $this->log('LifterLMS Query Args: ' . print_r($query_args, true), 'info');
+        
+        $test_query = new WP_Query($query_args);
+        $this->log('LifterLMS Query Results: Found ' . $test_query->found_posts . ' questions', 'info');
+        
+        if ($test_query->have_posts()) {
+            while ($test_query->have_posts()) {
+                $test_query->the_post();
+                $question_id = get_the_ID();
+                $this->log('LifterLMS Query Found Question: ' . $question_id, 'info');
+            }
+            wp_reset_postdata();
+        }
+        
+        // Check if there are questions with different post_status
+        $all_status_questions = get_posts(array(
+            'post_type' => 'llms_question',
+            'meta_query' => array(
+                array(
+                    'key' => '_llms_parent_id',
+                    'value' => $quiz_id,
+                ),
+            ),
+            'posts_per_page' => -1,
+            'post_status' => 'any'
+        ));
+        
+        if (!empty($all_status_questions)) {
+            $this->log('Questions with ANY status for quiz ' . $quiz_id . ':', 'info');
+            foreach ($all_status_questions as $q) {
+                $this->log('Question ' . $q->ID . ' has status: ' . $q->post_status, 'info');
+            }
+        }
+        
+        $this->log('=== END LIFTER LMS QUERY DEBUG ===', 'info');
     }
     
     /**
