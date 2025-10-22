@@ -202,6 +202,7 @@
             statsHtml += '<li>Sections Synced: ' + stats.sections_synced + '</li>';
             statsHtml += '<li>Lessons Synced: ' + stats.lessons_synced + '</li>';
             statsHtml += '<li>Quizzes Synced: ' + stats.quizzes_synced + '</li>';
+            statsHtml += '<li>Questions Synced: ' + stats.questions_synced + '</li>';
             statsHtml += '<li>Enrollments Synced: ' + stats.enrollments_synced + '</li>';
             if (stats.errors > 0) {
                 statsHtml += '<li class="error">Errors: ' + stats.errors + '</li>';
