@@ -22,6 +22,7 @@ class WPML_LLMS_Course_Fixer {
         'sections_synced' => 0,
         'lessons_synced' => 0,
         'quizzes_synced' => 0,
+        'questions_synced' => 0,
         'errors' => 0
     );
     
@@ -42,6 +43,7 @@ class WPML_LLMS_Course_Fixer {
             'sections_synced' => 0,
             'lessons_synced' => 0,
             'quizzes_synced' => 0,
+            'questions_synced' => 0,
             'enrollments_synced' => 0,
             'errors' => 0,
             'start_time' => current_time('mysql'),
@@ -79,6 +81,9 @@ class WPML_LLMS_Course_Fixer {
             
             // Sync course quizzes
             $this->sync_course_quizzes($course_id, $translations);
+            
+            // Sync quiz questions
+            $this->sync_quiz_questions($course_id, $translations);
             
             // Sync enrollments
             $this->sync_course_enrollments($course_id, $translations);
@@ -410,6 +415,83 @@ class WPML_LLMS_Course_Fixer {
             }
             
             $this->log('Completed quiz sync for ' . $translation['title'], 'success');
+        }
+    }
+    
+    /**
+     * Sync quiz questions
+     */
+    private function sync_quiz_questions($course_id, $translations) {
+        $this->log('Syncing quiz questions...', 'info');
+        
+        if (!class_exists('LLMS_Course')) {
+            $this->log('LifterLMS not available', 'warning');
+            return;
+        }
+        
+        $main_course = new LLMS_Course($course_id);
+        $main_lessons = $main_course->get_lessons('lessons');
+        
+        if (empty($main_lessons)) {
+            $this->log('No lessons found in main course', 'info');
+            return;
+        }
+        
+        foreach ($translations as $lang_code => $translation) {
+            $this->log('Processing quiz questions for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
+            
+            // Process each lesson to find quizzes and their questions
+            foreach ($main_lessons as $main_lesson) {
+                if (!$main_lesson->has_quiz()) {
+                    continue; // Skip lessons without quizzes
+                }
+                
+                $main_quiz = $main_lesson->get_quiz();
+                if (!$main_quiz) {
+                    continue; // Skip if quiz object not found
+                }
+                
+                $main_quiz_id = $main_quiz->get('id');
+                $translated_quiz_id = apply_filters('wpml_object_id', $main_quiz_id, 'llms_quiz', false, $lang_code);
+                
+                if (!$translated_quiz_id || $translated_quiz_id === $main_quiz_id) {
+                    continue; // Skip if no translation or same quiz
+                }
+                
+                // Get questions from main quiz
+                $main_questions = $main_quiz->get_questions('ids');
+                
+                if (empty($main_questions)) {
+                    $this->log('No questions found in main quiz ' . $main_quiz_id, 'info');
+                    continue;
+                }
+                
+                $this->log('Found ' . count($main_questions) . ' questions in main quiz ' . $main_quiz_id, 'info');
+                
+                // Process each question
+                foreach ($main_questions as $main_question_id) {
+                    $translated_question_id = apply_filters('wpml_object_id', $main_question_id, 'llms_question', false, $lang_code);
+                    
+                    if ($translated_question_id && $translated_question_id !== $main_question_id) {
+                        // Fix question → quiz relationship using post_parent
+                        $current_parent = wp_get_post_parent_id($translated_question_id);
+                        if ($current_parent != $translated_quiz_id) {
+                            wp_update_post(array(
+                                'ID' => $translated_question_id,
+                                'post_parent' => $translated_quiz_id
+                            ));
+                            $this->log('Fixed question ' . $translated_question_id . ' parent to quiz ' . $translated_quiz_id, 'success');
+                            $this->stats['questions_synced']++;
+                        } else {
+                            $this->log('Question ' . $translated_question_id . ' already has correct parent quiz', 'info');
+                        }
+                    } else {
+                        $this->log('No translated question found for question ' . $main_question_id . ' in ' . $lang_code, 'warning');
+                    }
+                }
+            }
+            
+            $this->log('Completed question sync for ' . $translation['title'], 'success');
         }
     }
     
