@@ -473,6 +473,8 @@ class WPML_LLMS_Course_Fixer {
                     $translated_question_id = apply_filters('wpml_object_id', $main_question_id, 'llms_question', false, $lang_code);
                     
                     if ($translated_question_id && $translated_question_id !== $main_question_id) {
+                        $question_updated = false;
+                        
                         // Fix question → quiz relationship using post_parent
                         $current_parent = wp_get_post_parent_id($translated_question_id);
                         if ($current_parent != $translated_quiz_id) {
@@ -481,9 +483,18 @@ class WPML_LLMS_Course_Fixer {
                                 'post_parent' => $translated_quiz_id
                             ));
                             $this->log('Fixed question ' . $translated_question_id . ' parent to quiz ' . $translated_quiz_id, 'success');
+                            $question_updated = true;
+                        }
+                        
+                        // Sync question meta data
+                        if ($this->sync_question_meta($main_question_id, $translated_question_id)) {
+                            $question_updated = true;
+                        }
+                        
+                        if ($question_updated) {
                             $this->stats['questions_synced']++;
                         } else {
-                            $this->log('Question ' . $translated_question_id . ' already has correct parent quiz', 'info');
+                            $this->log('Question ' . $translated_question_id . ' already properly configured', 'info');
                         }
                     } else {
                         $this->log('No translated question found for question ' . $main_question_id . ' in ' . $lang_code, 'warning');
@@ -493,6 +504,78 @@ class WPML_LLMS_Course_Fixer {
             
             $this->log('Completed question sync for ' . $translation['title'], 'success');
         }
+    }
+    
+    /**
+     * Sync question meta data from source to translated question
+     */
+    private function sync_question_meta($source_question_id, $translated_question_id) {
+        $meta_synced = false;
+        
+        // Get all meta for source question
+        $source_meta = get_post_meta($source_question_id);
+        
+        if (empty($source_meta)) {
+            $this->log('No meta found for source question ' . $source_question_id, 'warning');
+            return false;
+        }
+        
+        // Define LifterLMS question meta keys that should be synced
+        $llms_meta_keys = array(
+            '_llms_question_type',
+            '_llms_points',
+            '_llms_parent_id',
+            '_llms_multi_choices',
+            '_llms_description_enabled',
+            '_llms_video_enabled',
+            '_llms_video_src',
+            '_llms_clarifications_enabled',
+            '_llms_clarifications'
+        );
+        
+        // Get existing translated meta to compare
+        $translated_meta = get_post_meta($translated_question_id);
+        
+        // Sync basic LifterLMS meta keys
+        foreach ($llms_meta_keys as $meta_key) {
+            if (isset($source_meta[$meta_key])) {
+                $source_value = $source_meta[$meta_key][0];
+                $current_value = isset($translated_meta[$meta_key]) ? $translated_meta[$meta_key][0] : '';
+                
+                if ($current_value !== $source_value) {
+                    update_post_meta($translated_question_id, $meta_key, $source_value);
+                    $this->log('Synced meta ' . $meta_key . ' for question ' . $translated_question_id, 'success');
+                    $meta_synced = true;
+                }
+            }
+        }
+        
+        // Sync choice meta keys (these are dynamic with unique IDs)
+        foreach ($source_meta as $meta_key => $meta_values) {
+            if (strpos($meta_key, '_llms_choice_') === 0) {
+                $source_value = $meta_values[0];
+                $current_value = get_post_meta($translated_question_id, $meta_key, true);
+                
+                if ($current_value !== $source_value) {
+                    update_post_meta($translated_question_id, $meta_key, $source_value);
+                    $this->log('Synced choice meta ' . $meta_key . ' for question ' . $translated_question_id, 'success');
+                    $meta_synced = true;
+                }
+            }
+        }
+        
+        // Update parent ID to point to translated quiz (not source quiz)
+        $translated_quiz_id = wp_get_post_parent_id($translated_question_id);
+        if ($translated_quiz_id) {
+            $current_parent_meta = get_post_meta($translated_question_id, '_llms_parent_id', true);
+            if ($current_parent_meta != $translated_quiz_id) {
+                update_post_meta($translated_question_id, '_llms_parent_id', $translated_quiz_id);
+                $this->log('Updated _llms_parent_id to ' . $translated_quiz_id . ' for question ' . $translated_question_id, 'success');
+                $meta_synced = true;
+            }
+        }
+        
+        return $meta_synced;
     }
     
     /**
