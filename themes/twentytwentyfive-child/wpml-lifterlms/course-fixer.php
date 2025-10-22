@@ -501,8 +501,9 @@ class WPML_LLMS_Course_Fixer {
                     }
                 }
                 
-                // Verify that the translated quiz can now find its questions
+                // Sync the quiz's question list meta data
                 if ($translated_quiz_id) {
+                    $this->sync_quiz_questions_meta($main_quiz_id, $translated_quiz_id, $main_questions);
                     $this->verify_quiz_questions($translated_quiz_id, $lang_code);
                 }
             }
@@ -584,6 +585,53 @@ class WPML_LLMS_Course_Fixer {
         }
         
         return $meta_synced;
+    }
+    
+    /**
+     * Sync quiz questions meta data - the key that LifterLMS uses to store question lists
+     */
+    private function sync_quiz_questions_meta($main_quiz_id, $translated_quiz_id, $main_questions) {
+        // Get the main quiz's question data
+        $main_quiz_questions_meta = get_post_meta($main_quiz_id, '_llms_questions', true);
+        
+        if (empty($main_quiz_questions_meta)) {
+            $this->log('No _llms_questions meta found for main quiz ' . $main_quiz_id, 'warning');
+            return false;
+        }
+        
+        // Create translated question list by mapping question IDs
+        $translated_questions_meta = array();
+        
+        if (is_array($main_quiz_questions_meta)) {
+            foreach ($main_quiz_questions_meta as $question_data) {
+                if (isset($question_data['id'])) {
+                    $main_question_id = $question_data['id'];
+                    $translated_question_id = apply_filters('wpml_object_id', $main_question_id, 'llms_question', false, 
+                        get_post_meta($translated_quiz_id, '_wpml_language_code', true));
+                    
+                    if ($translated_question_id && $translated_question_id !== $main_question_id) {
+                        // Copy question data but update the ID to translated version
+                        $translated_question_data = $question_data;
+                        $translated_question_data['id'] = $translated_question_id;
+                        $translated_questions_meta[] = $translated_question_data;
+                        
+                        $this->log('Mapped question ' . $main_question_id . ' to ' . $translated_question_id . ' in quiz meta', 'success');
+                    } else {
+                        $this->log('No translated question found for ' . $main_question_id . ' in quiz meta mapping', 'warning');
+                    }
+                }
+            }
+        }
+        
+        // Update the translated quiz's question meta
+        if (!empty($translated_questions_meta)) {
+            update_post_meta($translated_quiz_id, '_llms_questions', $translated_questions_meta);
+            $this->log('Updated _llms_questions meta for translated quiz ' . $translated_quiz_id . ' with ' . count($translated_questions_meta) . ' questions', 'success');
+            return true;
+        } else {
+            $this->log('No translated questions to add to quiz meta for quiz ' . $translated_quiz_id, 'error');
+            return false;
+        }
     }
     
     /**
