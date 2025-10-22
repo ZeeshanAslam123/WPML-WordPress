@@ -23,6 +23,7 @@ class WPML_LLMS_Course_Fixer {
         'lessons_synced' => 0,
         'quizzes_synced' => 0,
         'questions_synced' => 0,
+        'quiz_settings_synced' => 0,
         'errors' => 0
     );
     
@@ -44,6 +45,7 @@ class WPML_LLMS_Course_Fixer {
             'lessons_synced' => 0,
             'quizzes_synced' => 0,
             'questions_synced' => 0,
+            'quiz_settings_synced' => 0,
             'enrollments_synced' => 0,
             'errors' => 0,
             'start_time' => current_time('mysql'),
@@ -479,8 +481,11 @@ class WPML_LLMS_Course_Fixer {
                         $this->log('Fixed question ' . $question_id . ': _llms_parent_id => ' . $translated_quiz_id, 'success');
                         $questions_fixed++;
                         
-                        // Sync question choices if needed (based on user's working code pattern)
+                        // Sync question choices and meta
                         $this->sync_question_choices($orig_question_id, $question_id);
+                        
+                        // Also sync the parent quiz meta if needed
+                        $this->sync_quiz_meta($orig_quiz_id, $translated_quiz_id);
                     } else {
                         $this->log('Question ' . $question_id . ' already has correct parent quiz', 'info');
                     }
@@ -504,48 +509,80 @@ class WPML_LLMS_Course_Fixer {
     }
     
     /**
-     * Sync question choices between original and translated questions
-     * Based on the user's working sync_llms_question_choices pattern
+     * Sync question choices and meta between original and translated questions
+     * Based on your actual LifterLMS meta structure analysis
      */
     private function sync_question_choices($orig_question_id, $translated_question_id) {
-        // Get all choice-related meta from original question
-        $choice_metas = array(
-            '_llms_choice_0_choice',
-            '_llms_choice_1_choice', 
-            '_llms_choice_2_choice',
-            '_llms_choice_3_choice',
-            '_llms_choice_4_choice',
-            '_llms_choice_0_choice_id',
-            '_llms_choice_1_choice_id',
-            '_llms_choice_2_choice_id', 
-            '_llms_choice_3_choice_id',
-            '_llms_choice_4_choice_id',
-            '_llms_choice_0_correct',
-            '_llms_choice_1_correct',
-            '_llms_choice_2_correct',
-            '_llms_choice_3_correct', 
-            '_llms_choice_4_correct',
-            '_llms_choices',
-            '_llms_question_type'
-        );
+        global $wpdb;
+        
+        // Get ALL meta keys from original question that start with _llms_choice_
+        $choice_meta_keys = $wpdb->get_results($wpdb->prepare("
+            SELECT meta_key, meta_value 
+            FROM {$wpdb->postmeta} 
+            WHERE post_id = %d 
+            AND (meta_key LIKE '_llms_choice_%' 
+                 OR meta_key IN ('_llms_question_type', '_llms_points', '_llms_multi_choices', 
+                                '_llms_description_enabled', '_llms_video_enabled', '_llms_video_src'))
+        ", $orig_question_id));
         
         $synced_choices = 0;
         
-        foreach ($choice_metas as $meta_key) {
-            $orig_value = get_post_meta($orig_question_id, $meta_key, true);
+        foreach ($choice_meta_keys as $meta) {
+            $current_value = get_post_meta($translated_question_id, $meta->meta_key, true);
             
-            if (!empty($orig_value)) {
-                $current_value = get_post_meta($translated_question_id, $meta_key, true);
-                
-                if ($current_value != $orig_value) {
-                    update_post_meta($translated_question_id, $meta_key, $orig_value);
-                    $synced_choices++;
-                }
+            // Skip if values are the same
+            if ($current_value === $meta->meta_value) {
+                continue;
             }
+            
+            // Update the meta value
+            update_post_meta($translated_question_id, $meta->meta_key, $meta->meta_value);
+            $synced_choices++;
+            
+            $this->log('Synced ' . $meta->meta_key . ' for question ' . $translated_question_id, 'info');
         }
         
         if ($synced_choices > 0) {
-            $this->log('Synced ' . $synced_choices . ' choice fields for question ' . $translated_question_id, 'info');
+            $this->log('Synced ' . $synced_choices . ' choice/meta fields for question ' . $translated_question_id, 'success');
+        }
+    }
+    
+    /**
+     * Sync quiz meta settings between original and translated quizzes
+     * Based on your analysis showing Urdu quiz missing most settings
+     */
+    private function sync_quiz_meta($orig_quiz_id, $translated_quiz_id) {
+        global $wpdb;
+        
+        // Get ALL meta keys from original quiz (excluding lesson_id which should be different)
+        $quiz_meta_keys = $wpdb->get_results($wpdb->prepare("
+            SELECT meta_key, meta_value 
+            FROM {$wpdb->postmeta} 
+            WHERE post_id = %d 
+            AND meta_key LIKE '_llms_%'
+            AND meta_key NOT IN ('_llms_lesson_id')
+        ", $orig_quiz_id));
+        
+        $synced_settings = 0;
+        
+        foreach ($quiz_meta_keys as $meta) {
+            $current_value = get_post_meta($translated_quiz_id, $meta->meta_key, true);
+            
+            // Skip if values are the same
+            if ($current_value === $meta->meta_value) {
+                continue;
+            }
+            
+            // Update the meta value
+            update_post_meta($translated_quiz_id, $meta->meta_key, $meta->meta_value);
+            $synced_settings++;
+            
+            $this->log('Synced quiz setting ' . $meta->meta_key . ' for quiz ' . $translated_quiz_id, 'info');
+        }
+        
+        if ($synced_settings > 0) {
+            $this->log('Synced ' . $synced_settings . ' quiz settings for quiz ' . $translated_quiz_id, 'success');
+            $this->stats['quiz_settings_synced'] += $synced_settings;
         }
     }
     
