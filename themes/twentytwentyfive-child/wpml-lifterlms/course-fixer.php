@@ -511,9 +511,9 @@ class WPML_LLMS_Course_Fixer {
                     }
                 }
                 
-                // Sync the quiz's question list meta data
+                // Sync questions using your proven working method
                 if ($translated_quiz_id) {
-                    $this->sync_quiz_questions_meta($main_quiz_id, $translated_quiz_id, $main_questions);
+                    $this->sync_questions_like_your_code($main_quiz_id, $translated_quiz_id, $lang_code);
                     $this->verify_quiz_questions($translated_quiz_id, $lang_code);
                 }
             }
@@ -694,6 +694,54 @@ class WPML_LLMS_Course_Fixer {
         }
         
         return false;
+    }
+    
+    /**
+     * Sync questions using your proven working method
+     * Based on your ajax_handle_fix() function pattern
+     */
+    private function sync_questions_like_your_code($main_quiz_id, $translated_quiz_id, $target_lang) {
+        $default_lang = apply_filters('wpml_default_language', null) ?: 'en';
+        
+        // Get all questions for the translated quiz (your approach)
+        $questions = get_posts([
+            'post_type' => 'llms_question',
+            'posts_per_page' => -1,
+            'post_status' => 'any',
+            'suppress_filters' => false,
+            'lang' => $target_lang,
+            'fields' => 'ids',
+        ]);
+        
+        $questions_fixed = 0;
+        
+        foreach ($questions as $post_id) {
+            // Get the original question ID (your pattern)
+            $orig_id = apply_filters('wpml_object_id', $post_id, 'llms_question', true, $default_lang);
+            if (!$orig_id || $orig_id == $post_id) {
+                continue;
+            }
+            
+            // Check if this question belongs to our quiz
+            $orig_quiz = get_post_meta($orig_id, '_llms_parent_id', true);
+            if ($orig_quiz != $main_quiz_id) {
+                continue; // This question belongs to a different quiz
+            }
+            
+            // Fix the question relationship (your exact pattern)
+            $translated_quiz = apply_filters('wpml_object_id', $orig_quiz, 'llms_quiz', false, $target_lang);
+            if ($translated_quiz && get_post($translated_quiz) && $translated_quiz == $translated_quiz_id) {
+                update_post_meta($post_id, '_llms_parent_id', $translated_quiz);
+                $this->log('Question ' . $post_id . ' fixed: _llms_parent_id => ' . $translated_quiz, 'success');
+                $questions_fixed++;
+                
+                // Fix question and choices relationship (your exact function)
+                $this->sync_llms_question_choices($orig_id, $post_id);
+            }
+        }
+        
+        $this->log('Fixed ' . $questions_fixed . ' questions using your proven method', 'success');
+        return $questions_fixed > 0;
     }
     
     /**
