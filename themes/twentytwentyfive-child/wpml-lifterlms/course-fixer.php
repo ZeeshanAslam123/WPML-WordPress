@@ -434,63 +434,69 @@ class WPML_LLMS_Course_Fixer {
         
         $default_lang = apply_filters('wpml_default_language', null) ?: 'en';
         
+        // First, get all English questions and find their translations
+        $english_questions = get_posts(array(
+            'post_type' => 'llms_question',
+            'posts_per_page' => -1,
+            'post_status' => 'any',
+            'suppress_filters' => false,
+            'lang' => $default_lang,
+            'fields' => 'ids',
+        ));
+        
+        $this->log('Found ' . count($english_questions) . ' English questions to process', 'info');
+        
         foreach ($translations as $lang_code => $translation) {
             $this->log('Processing questions for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
             
-            // Get all questions for this language using WPML approach
-            $questions = get_posts(array(
-                'post_type' => 'llms_question',
-                'posts_per_page' => -1,
-                'post_status' => 'any',
-                'suppress_filters' => false,
-                'lang' => $lang_code,
-                'fields' => 'ids',
-            ));
-            
-            if (empty($questions)) {
-                $this->log('No questions found for language ' . $lang_code, 'info');
-                continue;
-            }
-            
             $questions_fixed = 0;
             
-            foreach ($questions as $question_id) {
-                // Get the original question ID (from default language)
-                $orig_question_id = apply_filters('wpml_object_id', $question_id, 'llms_question', true, $default_lang);
+            foreach ($english_questions as $orig_question_id) {
+                // Find the translated question
+                $translated_question_id = apply_filters('wpml_object_id', $orig_question_id, 'llms_question', false, $lang_code);
                 
-                if (!$orig_question_id || $orig_question_id == $question_id) {
-                    continue; // Skip if this is the original or no original found
+                if (!$translated_question_id || $translated_question_id == $orig_question_id) {
+                    continue; // Skip if no translation found or this is the original
                 }
+                
+                $this->log('Found translated question: ' . $orig_question_id . ' => ' . $translated_question_id, 'info');
                 
                 // Get the original parent quiz ID from the original question
                 $orig_quiz_id = get_post_meta($orig_question_id, '_llms_parent_id', true);
                 
                 if (!$orig_quiz_id) {
-                    continue; // Skip if no parent quiz found
+                    $this->log('No parent quiz found for original question ' . $orig_question_id, 'warning');
+                    continue;
                 }
                 
                 // Find the translated quiz ID
                 $translated_quiz_id = apply_filters('wpml_object_id', $orig_quiz_id, 'llms_quiz', false, $lang_code);
                 
-                if ($translated_quiz_id && get_post($translated_quiz_id)) {
-                    // Update the question's parent quiz reference
-                    $current_parent = get_post_meta($question_id, '_llms_parent_id', true);
-                    
-                    if ($current_parent != $translated_quiz_id) {
-                        update_post_meta($question_id, '_llms_parent_id', $translated_quiz_id);
-                        $this->log('Fixed question ' . $question_id . ': _llms_parent_id => ' . $translated_quiz_id, 'success');
-                        $questions_fixed++;
-                        
-                        // Sync question choices and meta
-                        $this->sync_question_choices($orig_question_id, $question_id);
-                        
-                        // Also sync the parent quiz meta if needed
-                        $this->sync_quiz_meta($orig_quiz_id, $translated_quiz_id);
-                    } else {
-                        $this->log('Question ' . $question_id . ' already has correct parent quiz', 'info');
-                    }
-                } else {
+                if (!$translated_quiz_id || !get_post($translated_quiz_id)) {
                     $this->log('No translated quiz found for quiz ' . $orig_quiz_id . ' in ' . $lang_code, 'warning');
+                    continue;
+                }
+                
+                // Update the question's parent quiz reference
+                $current_parent = get_post_meta($translated_question_id, '_llms_parent_id', true);
+                
+                $this->log('Question ' . $translated_question_id . ': current parent = ' . $current_parent . ', should be = ' . $translated_quiz_id, 'info');
+                
+                if ($current_parent != $translated_quiz_id) {
+                    update_post_meta($translated_question_id, '_llms_parent_id', $translated_quiz_id);
+                    $this->log('Fixed question ' . $translated_question_id . ': _llms_parent_id => ' . $translated_quiz_id, 'success');
+                    $questions_fixed++;
+                    
+                    // Sync question choices and meta
+                    $this->sync_question_choices($orig_question_id, $translated_question_id);
+                    
+                    // Also sync the parent quiz meta if needed
+                    $this->sync_quiz_meta($orig_quiz_id, $translated_quiz_id);
+                } else {
+                    $this->log('Question ' . $translated_question_id . ' already has correct parent quiz', 'info');
+                    
+                    // Still sync choices even if parent is correct
+                    $this->sync_question_choices($orig_question_id, $translated_question_id);
                 }
             }
             
@@ -515,6 +521,8 @@ class WPML_LLMS_Course_Fixer {
     private function sync_question_choices($orig_question_id, $translated_question_id) {
         global $wpdb;
         
+        $this->log('Syncing choices from question ' . $orig_question_id . ' to ' . $translated_question_id, 'info');
+        
         // Get ALL meta keys from original question that start with _llms_choice_
         $choice_meta_keys = $wpdb->get_results($wpdb->prepare("
             SELECT meta_key, meta_value 
@@ -525,13 +533,19 @@ class WPML_LLMS_Course_Fixer {
                                 '_llms_description_enabled', '_llms_video_enabled', '_llms_video_src'))
         ", $orig_question_id));
         
+        $this->log('Found ' . count($choice_meta_keys) . ' meta keys to sync from original question', 'info');
+        
         $synced_choices = 0;
         
         foreach ($choice_meta_keys as $meta) {
             $current_value = get_post_meta($translated_question_id, $meta->meta_key, true);
             
+            // Log what we're comparing
+            $this->log('Checking ' . $meta->meta_key . ': current="' . $current_value . '", original="' . $meta->meta_value . '"', 'info');
+            
             // Skip if values are the same
             if ($current_value === $meta->meta_value) {
+                $this->log('Values match, skipping ' . $meta->meta_key, 'info');
                 continue;
             }
             
@@ -539,11 +553,13 @@ class WPML_LLMS_Course_Fixer {
             update_post_meta($translated_question_id, $meta->meta_key, $meta->meta_value);
             $synced_choices++;
             
-            $this->log('Synced ' . $meta->meta_key . ' for question ' . $translated_question_id, 'info');
+            $this->log('✅ Synced ' . $meta->meta_key . ' for question ' . $translated_question_id, 'success');
         }
         
         if ($synced_choices > 0) {
-            $this->log('Synced ' . $synced_choices . ' choice/meta fields for question ' . $translated_question_id, 'success');
+            $this->log('✅ Synced ' . $synced_choices . ' choice/meta fields for question ' . $translated_question_id, 'success');
+        } else {
+            $this->log('⚠️ No choice fields needed syncing for question ' . $translated_question_id, 'warning');
         }
     }
     
