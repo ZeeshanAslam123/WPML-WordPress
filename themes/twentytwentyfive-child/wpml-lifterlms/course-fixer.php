@@ -24,6 +24,7 @@ class WPML_LLMS_Course_Fixer {
         'quizzes_synced' => 0,
         'questions_synced' => 0,
         'quiz_settings_synced' => 0,
+        'access_plans_synced' => 0,
         'errors' => 0
     );
     
@@ -46,6 +47,7 @@ class WPML_LLMS_Course_Fixer {
             'quizzes_synced' => 0,
             'questions_synced' => 0,
             'quiz_settings_synced' => 0,
+            'access_plans_synced' => 0,
             'enrollments_synced' => 0,
             'errors' => 0,
             'start_time' => current_time('mysql'),
@@ -83,6 +85,9 @@ class WPML_LLMS_Course_Fixer {
             
             // Sync course quizzes
             $this->sync_course_quizzes($course_id, $translations);
+            
+            // Sync access plans
+            $this->sync_access_plans($course_id, $translations);
             
             // Sync enrollments
             $this->sync_course_enrollments($course_id, $translations);
@@ -624,6 +629,70 @@ class WPML_LLMS_Course_Fixer {
             $this->log('Synced ' . $synced_settings . ' quiz settings for quiz ' . $translated_quiz_id, 'success');
             $this->stats['quiz_settings_synced'] += $synced_settings;
         }
+    }
+    
+    /**
+     * Sync access plans between original and translated courses
+     * Access plans are linked to courses via _llms_product_id meta key
+     */
+    private function sync_access_plans($course_id, $translations) {
+        $this->log('Syncing access plans...', 'info');
+        
+        $default_lang = apply_filters('wpml_default_language', null) ?: 'en';
+        
+        // Get all access plans for the original course
+        $original_access_plans = get_posts(array(
+            'post_type' => 'llms_access_plan',
+            'posts_per_page' => -1,
+            'post_status' => 'any',
+            'meta_key' => '_llms_product_id',
+            'meta_value' => $course_id,
+            'suppress_filters' => false,
+            'lang' => $default_lang,
+            'fields' => 'ids',
+        ));
+        
+        $this->log('Found ' . count($original_access_plans) . ' access plans for original course', 'info');
+        
+        foreach ($translations as $lang_code => $translation) {
+            $this->log('Processing access plans for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
+            
+            $plans_synced = 0;
+            
+            foreach ($original_access_plans as $original_plan_id) {
+                // Find the translated access plan
+                $translated_plan_id = apply_filters('wpml_object_id', $original_plan_id, 'llms_access_plan', false, $lang_code);
+                
+                if (!$translated_plan_id || $translated_plan_id == $original_plan_id) {
+                    $this->log('No translated access plan found for plan ' . $original_plan_id . ' in ' . $lang_code, 'warning');
+                    continue;
+                }
+                
+                $this->log('Found translated access plan: ' . $original_plan_id . ' => ' . $translated_plan_id, 'info');
+                
+                // Update the access plan's product reference
+                $current_product_id = get_post_meta($translated_plan_id, '_llms_product_id', true);
+                
+                $this->log('Access plan ' . $translated_plan_id . ': current product = ' . $current_product_id . ', should be = ' . $translation['id'], 'info');
+                
+                if ($current_product_id != $translation['id']) {
+                    update_post_meta($translated_plan_id, '_llms_product_id', $translation['id']);
+                    $this->log('✅ Fixed access plan ' . $translated_plan_id . ': _llms_product_id => ' . $translation['id'], 'success');
+                    $plans_synced++;
+                    $this->stats['access_plans_synced']++;
+                } else {
+                    $this->log('Access plan ' . $translated_plan_id . ' already has correct product reference', 'info');
+                }
+            }
+            
+            if ($plans_synced > 0) {
+                $this->log('✅ Synced ' . $plans_synced . ' access plans for ' . $translation['title'], 'success');
+            } else {
+                $this->log('No access plans needed syncing for ' . $translation['title'], 'info');
+            }
+        }
+        
+        $this->log('Access plan sync completed', 'success');
     }
     
     /**
