@@ -22,6 +22,8 @@ class WPML_LLMS_Course_Fixer {
         'sections_synced' => 0,
         'lessons_synced' => 0,
         'quizzes_synced' => 0,
+        'questions_synced' => 0,
+        'quiz_settings_synced' => 0,
         'errors' => 0
     );
     
@@ -42,6 +44,8 @@ class WPML_LLMS_Course_Fixer {
             'sections_synced' => 0,
             'lessons_synced' => 0,
             'quizzes_synced' => 0,
+            'questions_synced' => 0,
+            'quiz_settings_synced' => 0,
             'enrollments_synced' => 0,
             'errors' => 0,
             'start_time' => current_time('mysql'),
@@ -411,6 +415,271 @@ class WPML_LLMS_Course_Fixer {
             
             $this->log('Completed quiz sync for ' . $translation['title'], 'success');
         }
+        
+        // Now sync quiz-question relationships
+        $this->sync_quiz_questions($course_id, $translations);
+    }
+    
+    /**
+     * Sync quiz-question relationships
+     * Based on LifterLMS structure where questions use _llms_parent_id to reference their parent quiz
+     */
+    private function sync_quiz_questions($course_id, $translations) {
+        $this->log('Syncing quiz-question relationships...', 'info');
+        
+        if (!class_exists('LLMS_Course')) {
+            $this->log('LifterLMS not available', 'warning');
+            return;
+        }
+        
+        $default_lang = apply_filters('wpml_default_language', null) ?: 'en';
+        
+        // First, get all English questions and find their translations
+        $english_questions = get_posts(array(
+            'post_type' => 'llms_question',
+            'posts_per_page' => -1,
+            'post_status' => 'any',
+            'suppress_filters' => false,
+            'lang' => $default_lang,
+            'fields' => 'ids',
+        ));
+        
+        $this->log('Found ' . count($english_questions) . ' English questions to process', 'info');
+        
+        foreach ($translations as $lang_code => $translation) {
+            $this->log('Processing questions for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
+            
+            $questions_fixed = 0;
+            
+            foreach ($english_questions as $orig_question_id) {
+                // Find the translated question
+                $translated_question_id = apply_filters('wpml_object_id', $orig_question_id, 'llms_question', false, $lang_code);
+                
+                if (!$translated_question_id || $translated_question_id == $orig_question_id) {
+                    continue; // Skip if no translation found or this is the original
+                }
+                
+                $this->log('Found translated question: ' . $orig_question_id . ' => ' . $translated_question_id, 'info');
+                
+                // Get the original parent quiz ID from the original question
+                $orig_quiz_id = get_post_meta($orig_question_id, '_llms_parent_id', true);
+                
+                if (!$orig_quiz_id) {
+                    $this->log('No parent quiz found for original question ' . $orig_question_id, 'warning');
+                    continue;
+                }
+                
+                // Find the translated quiz ID
+                $translated_quiz_id = apply_filters('wpml_object_id', $orig_quiz_id, 'llms_quiz', false, $lang_code);
+                
+                if (!$translated_quiz_id || !get_post($translated_quiz_id)) {
+                    $this->log('No translated quiz found for quiz ' . $orig_quiz_id . ' in ' . $lang_code, 'warning');
+                    continue;
+                }
+                
+                // Update the question's parent quiz reference
+                $current_parent = get_post_meta($translated_question_id, '_llms_parent_id', true);
+                
+                $this->log('Question ' . $translated_question_id . ': current parent = ' . $current_parent . ', should be = ' . $translated_quiz_id, 'info');
+                
+                if ($current_parent != $translated_quiz_id) {
+                    update_post_meta($translated_question_id, '_llms_parent_id', $translated_quiz_id);
+                    $this->log('Fixed question ' . $translated_question_id . ': _llms_parent_id => ' . $translated_quiz_id, 'success');
+                    $questions_fixed++;
+                    
+                    // Sync question choices and meta
+                    $this->sync_question_choices($orig_question_id, $translated_question_id);
+                    
+                    // Also sync the parent quiz meta if needed
+                    $this->sync_quiz_meta($orig_quiz_id, $translated_quiz_id);
+                } else {
+                    $this->log('Question ' . $translated_question_id . ' already has correct parent quiz', 'info');
+                    
+                    // Still sync choices even if parent is correct
+                    $this->sync_question_choices($orig_question_id, $translated_question_id);
+                }
+            }
+            
+            if ($questions_fixed > 0) {
+                $this->log('Fixed ' . $questions_fixed . ' questions for ' . $translation['title'], 'success');
+                $this->stats['questions_synced'] += $questions_fixed;
+            } else {
+                $this->log('No questions needed fixing for ' . $translation['title'], 'info');
+            }
+        }
+        
+        $this->log('Quiz-question relationship sync completed', 'success');
+        
+        // Verify quiz-question relationships after sync
+        $this->verify_quiz_questions($course_id, $translations);
+    }
+    
+    /**
+     * Sync question choices and meta between original and translated questions
+     * Based on your actual LifterLMS meta structure analysis
+     */
+    private function sync_question_choices($orig_question_id, $translated_question_id) {
+        global $wpdb;
+        
+        $this->log('Syncing choices from question ' . $orig_question_id . ' to ' . $translated_question_id, 'info');
+        
+        // Get ALL meta keys from original question that start with _llms_choice_
+        $choice_meta_keys = $wpdb->get_results($wpdb->prepare("
+            SELECT meta_key, meta_value 
+            FROM {$wpdb->postmeta} 
+            WHERE post_id = %d 
+            AND (meta_key LIKE '_llms_choice_%' 
+                 OR meta_key IN ('_llms_question_type', '_llms_points', '_llms_multi_choices', 
+                                '_llms_description_enabled', '_llms_video_enabled', '_llms_video_src'))
+        ", $orig_question_id));
+        
+        $this->log('Found ' . count($choice_meta_keys) . ' meta keys to sync from original question', 'info');
+        
+        $synced_choices = 0;
+        
+        foreach ($choice_meta_keys as $meta) {
+            $current_value = get_post_meta($translated_question_id, $meta->meta_key, true);
+            
+            // Log what we're comparing
+            $this->log('Checking ' . $meta->meta_key . ': current="' . $current_value . '", original="' . $meta->meta_value . '"', 'info');
+            
+            // Skip if values are the same
+            if ($current_value === $meta->meta_value) {
+                $this->log('Values match, skipping ' . $meta->meta_key, 'info');
+                continue;
+            }
+            
+            // Handle serialized data correctly - unserialize first, then let WordPress serialize it properly
+            $value_to_store = $meta->meta_value;
+            
+            // Check if this is a serialized value that needs to be unserialized
+            if (is_serialized($meta->meta_value)) {
+                $unserialized_value = maybe_unserialize($meta->meta_value);
+                if ($unserialized_value !== false) {
+                    $value_to_store = $unserialized_value;
+                    $this->log('Unserializing ' . $meta->meta_key . ' before storing', 'info');
+                }
+            }
+            
+            // Update the meta value - WordPress will serialize arrays automatically
+            update_post_meta($translated_question_id, $meta->meta_key, $value_to_store);
+            $synced_choices++;
+            
+            $this->log('✅ Synced ' . $meta->meta_key . ' for question ' . $translated_question_id, 'success');
+        }
+        
+        if ($synced_choices > 0) {
+            $this->log('✅ Synced ' . $synced_choices . ' choice/meta fields for question ' . $translated_question_id, 'success');
+        } else {
+            $this->log('⚠️ No choice fields needed syncing for question ' . $translated_question_id, 'warning');
+        }
+    }
+    
+    /**
+     * Sync quiz meta settings between original and translated quizzes
+     * Based on your analysis showing Urdu quiz missing most settings
+     */
+    private function sync_quiz_meta($orig_quiz_id, $translated_quiz_id) {
+        global $wpdb;
+        
+        // Get ALL meta keys from original quiz (excluding lesson_id which should be different)
+        $quiz_meta_keys = $wpdb->get_results($wpdb->prepare("
+            SELECT meta_key, meta_value 
+            FROM {$wpdb->postmeta} 
+            WHERE post_id = %d 
+            AND meta_key LIKE '_llms_%'
+            AND meta_key NOT IN ('_llms_lesson_id')
+        ", $orig_quiz_id));
+        
+        $synced_settings = 0;
+        
+        foreach ($quiz_meta_keys as $meta) {
+            $current_value = get_post_meta($translated_quiz_id, $meta->meta_key, true);
+            
+            // Skip if values are the same
+            if ($current_value === $meta->meta_value) {
+                continue;
+            }
+            
+            // Handle serialized data correctly - unserialize first, then let WordPress serialize it properly
+            $value_to_store = $meta->meta_value;
+            
+            // Check if this is a serialized value that needs to be unserialized
+            if (is_serialized($meta->meta_value)) {
+                $unserialized_value = maybe_unserialize($meta->meta_value);
+                if ($unserialized_value !== false) {
+                    $value_to_store = $unserialized_value;
+                    $this->log('Unserializing quiz setting ' . $meta->meta_key . ' before storing', 'info');
+                }
+            }
+            
+            // Update the meta value - WordPress will serialize arrays automatically
+            update_post_meta($translated_quiz_id, $meta->meta_key, $value_to_store);
+            $synced_settings++;
+            
+            $this->log('Synced quiz setting ' . $meta->meta_key . ' for quiz ' . $translated_quiz_id, 'info');
+        }
+        
+        if ($synced_settings > 0) {
+            $this->log('Synced ' . $synced_settings . ' quiz settings for quiz ' . $translated_quiz_id, 'success');
+            $this->stats['quiz_settings_synced'] += $synced_settings;
+        }
+    }
+    
+    /**
+     * Verify that translated quizzes can find their questions after sync
+     */
+    private function verify_quiz_questions($course_id, $translations) {
+        $this->log('Verifying quiz-question relationships...', 'info');
+        
+        if (!class_exists('LLMS_Course') || !class_exists('LLMS_Quiz')) {
+            $this->log('LifterLMS classes not available for verification', 'warning');
+            return;
+        }
+        
+        foreach ($translations as $lang_code => $translation) {
+            $translated_course = new LLMS_Course($translation['id']);
+            $translated_lessons = $translated_course->get_lessons('lessons');
+            
+            if (empty($translated_lessons)) {
+                continue;
+            }
+            
+            $quiz_verification_count = 0;
+            $working_quizzes = 0;
+            $broken_quizzes = 0;
+            
+            foreach ($translated_lessons as $lesson) {
+                if (!$lesson->has_quiz()) {
+                    continue;
+                }
+                
+                $quiz = $lesson->get_quiz();
+                if (!$quiz) {
+                    continue;
+                }
+                
+                $quiz_verification_count++;
+                $quiz_id = $quiz->get('id');
+                
+                // Use LifterLMS's native method to get questions
+                $questions = $quiz->get_questions('ids');
+                
+                if (empty($questions)) {
+                    $this->log('WARNING: Quiz ' . $quiz_id . ' (' . $lang_code . ') still has no questions!', 'error');
+                    $broken_quizzes++;
+                } else {
+                    $this->log('Verified: Quiz ' . $quiz_id . ' (' . $lang_code . ') has ' . count($questions) . ' questions', 'success');
+                    $working_quizzes++;
+                }
+            }
+            
+            if ($quiz_verification_count > 0) {
+                $this->log('Verification for ' . $translation['title'] . ': ' . $working_quizzes . ' working, ' . $broken_quizzes . ' broken quizzes', 'info');
+            }
+        }
+        
+        $this->log('Quiz-question verification completed', 'success');
     }
     
     /**
