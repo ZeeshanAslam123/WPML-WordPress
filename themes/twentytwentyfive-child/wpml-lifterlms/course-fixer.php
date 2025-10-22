@@ -491,6 +491,11 @@ class WPML_LLMS_Course_Fixer {
                             $question_updated = true;
                         }
                         
+                        // Ensure question has correct menu_order (LifterLMS orders by this)
+                        if ($this->sync_question_menu_order($main_question_id, $translated_question_id)) {
+                            $question_updated = true;
+                        }
+                        
                         if ($question_updated) {
                             $this->stats['questions_synced']++;
                         } else {
@@ -588,6 +593,29 @@ class WPML_LLMS_Course_Fixer {
     }
     
     /**
+     * Sync question menu_order from source to translated question
+     */
+    private function sync_question_menu_order($source_question_id, $translated_question_id) {
+        $source_question = get_post($source_question_id);
+        $translated_question = get_post($translated_question_id);
+        
+        if (!$source_question || !$translated_question) {
+            return false;
+        }
+        
+        if ($source_question->menu_order != $translated_question->menu_order) {
+            wp_update_post(array(
+                'ID' => $translated_question_id,
+                'menu_order' => $source_question->menu_order
+            ));
+            $this->log('Updated menu_order to ' . $source_question->menu_order . ' for question ' . $translated_question_id, 'success');
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
      * Sync quiz questions meta data - the key that LifterLMS uses to store question lists
      */
     private function sync_quiz_questions_meta($main_quiz_id, $translated_quiz_id, $main_questions) {
@@ -648,7 +676,29 @@ class WPML_LLMS_Course_Fixer {
         if (empty($questions)) {
             $this->log('WARNING: Translated quiz ' . $quiz_id . ' (' . $lang_code . ') still has no questions after sync!', 'error');
             
-            // Try to find questions by post_parent relationship
+            // Try to find questions by _llms_parent_id meta (the actual method LifterLMS uses)
+            $meta_questions = get_posts(array(
+                'post_type' => 'llms_question',
+                'meta_query' => array(
+                    array(
+                        'key' => '_llms_parent_id',
+                        'value' => $quiz_id,
+                    ),
+                ),
+                'posts_per_page' => -1,
+                'post_status' => 'publish'
+            ));
+            
+            if (!empty($meta_questions)) {
+                $this->log('Found ' . count($meta_questions) . ' questions with _llms_parent_id=' . $quiz_id . ' but quiz->get_questions() returns empty', 'warning');
+                
+                // Log detailed question info for debugging
+                foreach ($meta_questions as $question) {
+                    $this->log('Question ' . $question->ID . ': status=' . $question->post_status . ', menu_order=' . $question->menu_order . ', parent_id=' . get_post_meta($question->ID, '_llms_parent_id', true), 'info');
+                }
+            }
+            
+            // Also try to find questions by post_parent relationship
             $child_questions = get_posts(array(
                 'post_type' => 'llms_question',
                 'post_parent' => $quiz_id,
