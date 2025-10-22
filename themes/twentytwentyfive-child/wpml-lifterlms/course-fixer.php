@@ -500,6 +500,11 @@ class WPML_LLMS_Course_Fixer {
                         $this->log('No translated question found for question ' . $main_question_id . ' in ' . $lang_code, 'warning');
                     }
                 }
+                
+                // Verify that the translated quiz can now find its questions
+                if ($translated_quiz_id) {
+                    $this->verify_quiz_questions($translated_quiz_id, $lang_code);
+                }
             }
             
             $this->log('Completed question sync for ' . $translation['title'], 'success');
@@ -530,7 +535,10 @@ class WPML_LLMS_Course_Fixer {
             '_llms_video_enabled',
             '_llms_video_src',
             '_llms_clarifications_enabled',
-            '_llms_clarifications'
+            '_llms_clarifications',
+            '_llms_question_order',
+            '_llms_question_bank_id',
+            '_llms_question_bank_order'
         );
         
         // Get existing translated meta to compare
@@ -576,6 +584,42 @@ class WPML_LLMS_Course_Fixer {
         }
         
         return $meta_synced;
+    }
+    
+    /**
+     * Verify that a translated quiz can find its questions
+     */
+    private function verify_quiz_questions($quiz_id, $lang_code) {
+        if (!class_exists('LLMS_Quiz')) {
+            return;
+        }
+        
+        $quiz = new LLMS_Quiz($quiz_id);
+        $questions = $quiz->get_questions('ids');
+        
+        if (empty($questions)) {
+            $this->log('WARNING: Translated quiz ' . $quiz_id . ' (' . $lang_code . ') still has no questions after sync!', 'error');
+            
+            // Try to find questions by post_parent relationship
+            $child_questions = get_posts(array(
+                'post_type' => 'llms_question',
+                'post_parent' => $quiz_id,
+                'posts_per_page' => -1,
+                'post_status' => 'publish'
+            ));
+            
+            if (!empty($child_questions)) {
+                $this->log('Found ' . count($child_questions) . ' questions with post_parent=' . $quiz_id . ' but quiz->get_questions() returns empty', 'warning');
+                
+                // Log the question IDs for debugging
+                $question_ids = array_map(function($q) { return $q->ID; }, $child_questions);
+                $this->log('Question IDs found by post_parent: ' . implode(', ', $question_ids), 'info');
+            } else {
+                $this->log('No questions found with post_parent=' . $quiz_id, 'error');
+            }
+        } else {
+            $this->log('Verified: Translated quiz ' . $quiz_id . ' (' . $lang_code . ') has ' . count($questions) . ' questions', 'success');
+        }
     }
     
     /**
