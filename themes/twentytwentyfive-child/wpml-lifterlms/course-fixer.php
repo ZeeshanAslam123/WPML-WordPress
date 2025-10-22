@@ -564,18 +564,9 @@ class WPML_LLMS_Course_Fixer {
             }
         }
         
-        // Sync choice meta keys (these are dynamic with unique IDs)
-        foreach ($source_meta as $meta_key => $meta_values) {
-            if (strpos($meta_key, '_llms_choice_') === 0) {
-                $source_value = $meta_values[0];
-                $current_value = get_post_meta($translated_question_id, $meta_key, true);
-                
-                if ($current_value !== $source_value) {
-                    update_post_meta($translated_question_id, $meta_key, $source_value);
-                    $this->log('Synced choice meta ' . $meta_key . ' for question ' . $translated_question_id, 'success');
-                    $meta_synced = true;
-                }
-            }
+        // Sync choice meta keys using your working pattern (preserve translated choice text)
+        if ($this->sync_llms_question_choices($source_question_id, $translated_question_id)) {
+            $meta_synced = true;
         }
         
         // Update parent ID to point to translated quiz (not source quiz)
@@ -590,6 +581,68 @@ class WPML_LLMS_Course_Fixer {
         }
         
         return $meta_synced;
+    }
+    
+    /**
+     * Sync LifterLMS question choices (based on your working function)
+     * Preserves translated choice text while copying other metadata
+     */
+    private function sync_llms_question_choices($english_question_id, $target_question_id) {
+        global $wpdb;
+
+        $english_meta = $wpdb->get_results( $wpdb->prepare( "
+            SELECT meta_key, meta_value
+            FROM {$wpdb->postmeta}
+            WHERE post_id = %d AND meta_key LIKE '_llms_choice_%%'
+        ", $english_question_id ) );
+
+        if ( empty( $english_meta ) ) {
+            return false;
+        }
+
+        $choices_synced = false;
+
+        foreach ( $english_meta as $row ) {
+            $choice_key = $row->meta_key;
+            $english_choice_data = maybe_unserialize( $row->meta_value );
+
+            // Get translated version of same choice
+            $target_meta = $wpdb->get_row( $wpdb->prepare( "
+                SELECT meta_value
+                FROM {$wpdb->postmeta}
+                WHERE post_id = %d AND meta_key = %s
+            ", $target_question_id, $choice_key ) );
+
+            if ( $target_meta ) {
+                $target_choice_data = maybe_unserialize( $target_meta->meta_value );
+
+                // Preserve translated 'choice' text only, copy other meta from source
+                if ( is_array( $english_choice_data ) ) {
+                    $updated = false;
+                    foreach ( $english_choice_data as $key => $value ) {
+                        if ( $key === 'choice' ) {
+                            continue; // Preserve translated choice text
+                        }
+                        if ( !isset($target_choice_data[$key]) || $target_choice_data[$key] !== $value ) {
+                            $target_choice_data[ $key ] = $value;
+                            $updated = true;
+                        }
+                    }
+                    if ( $updated ) {
+                        update_post_meta( $target_question_id, $choice_key, $target_choice_data );
+                        $this->log('Synced choice meta ' . $choice_key . ' for question ' . $target_question_id . ' (preserved translated text)', 'success');
+                        $choices_synced = true;
+                    }
+                }
+            } else {
+                // No translated choice exists, copy entire choice data
+                update_post_meta( $target_question_id, $choice_key, maybe_unserialize( $row->meta_value ) );
+                $this->log('Created choice meta ' . $choice_key . ' for question ' . $target_question_id, 'success');
+                $choices_synced = true;
+            }
+        }
+        
+        return $choices_synced;
     }
     
     /**
