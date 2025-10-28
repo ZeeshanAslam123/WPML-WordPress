@@ -36,9 +36,6 @@ class WPML_LLMS_Enrollment_Sync {
         
         // Hook into LifterLMS membership enrollment (if needed in future)
         add_action('llms_user_added_to_membership_level', array($this, 'sync_membership_enrollment'), 10, 2);
-        
-        // Add admin settings
-        add_action('admin_init', array($this, 'register_settings'));
     }
     
     /**
@@ -252,43 +249,7 @@ class WPML_LLMS_Enrollment_Sync {
         return get_option('wpml_llms_enrollment_sync_enabled', true);
     }
     
-    /**
-     * Register admin settings
-     */
-    public function register_settings() {
-        register_setting('wpml_llms_settings', 'wpml_llms_enrollment_sync_enabled');
-        
-        add_settings_section(
-            'wpml_llms_enrollment_section',
-            __('Enrollment Synchronization', 'twentytwentyfive-child'),
-            array($this, 'enrollment_section_callback'),
-            'wpml_llms_settings'
-        );
-        
-        add_settings_field(
-            'wpml_llms_enrollment_sync_enabled',
-            __('Enable Enrollment Sync', 'twentytwentyfive-child'),
-            array($this, 'enrollment_sync_field_callback'),
-            'wpml_llms_settings',
-            'wpml_llms_enrollment_section'
-        );
-    }
-    
-    /**
-     * Enrollment section callback
-     */
-    public function enrollment_section_callback() {
-        echo '<p>' . __('Configure automatic enrollment synchronization across course translations.', 'twentytwentyfive-child') . '</p>';
-    }
-    
-    /**
-     * Enrollment sync field callback
-     */
-    public function enrollment_sync_field_callback() {
-        $enabled = get_option('wpml_llms_enrollment_sync_enabled', true);
-        echo '<input type="checkbox" id="wpml_llms_enrollment_sync_enabled" name="wpml_llms_enrollment_sync_enabled" value="1" ' . checked(1, $enabled, false) . ' />';
-        echo '<label for="wpml_llms_enrollment_sync_enabled">' . __('Automatically enroll users in all language versions of a course when they enroll in one version', 'twentytwentyfive-child') . '</label>';
-    }
+
     
     /**
      * Log messages for debugging
