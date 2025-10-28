@@ -76,6 +76,7 @@ add_action('admin_notices', 'wpml_llms_admin_notices');
 require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/admin-menu.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/ajax-handlers.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/course-fixer.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/enrollment-sync.php';
 
 /**
  * Enqueue admin assets
