@@ -32,7 +32,7 @@ class WPML_LLMS_Admin_Menu {
             __('LLMS - WPML Fixes', 'twentytwentyfive-child'),        // Page title
             __('LLMS - WPML Fixes', 'twentytwentyfive-child'),        // Menu title
             'manage_options',                                  // Capability
-            'wpml-lifterlms',                                 // Menu slug
+            'ldninjas-customization',                         // Menu slug
             array($this, 'render_admin_page')                 // Callback
         );
     }
