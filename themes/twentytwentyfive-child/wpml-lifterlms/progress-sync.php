@@ -101,6 +101,9 @@ class WPML_LLMS_Progress_Sync {
                 if ($completion_result) {
                     $synced_count++;
                     $this->log('✅ Marked lesson ' . $translated_lesson_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
+                    
+                    // Clear progress cache for course and section containing this lesson
+                    $this->clear_progress_cache($user_id, $translated_lesson_id, 'lesson');
                 } else {
                     $this->log('❌ Failed to mark lesson ' . $translated_lesson_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
@@ -165,6 +168,9 @@ class WPML_LLMS_Progress_Sync {
                 if ($completion_result) {
                     $synced_count++;
                     $this->log('✅ Marked course ' . $translated_course_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
+                    
+                    // Clear progress cache for this course
+                    $this->clear_progress_cache($user_id, $translated_course_id, 'course');
                 } else {
                     $this->log('❌ Failed to mark course ' . $translated_course_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
@@ -229,6 +235,9 @@ class WPML_LLMS_Progress_Sync {
                 if ($completion_result) {
                     $synced_count++;
                     $this->log('✅ Marked section ' . $translated_section_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
+                    
+                    // Clear progress cache for this section and its parent course
+                    $this->clear_progress_cache($user_id, $translated_section_id, 'section');
                 } else {
                     $this->log('❌ Failed to mark section ' . $translated_section_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
@@ -294,6 +303,9 @@ class WPML_LLMS_Progress_Sync {
                 if ($completion_result) {
                     $synced_count++;
                     $this->log('✅ Marked quiz ' . $translated_quiz_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
+                    
+                    // Clear progress cache for course containing this quiz
+                    $this->clear_progress_cache($user_id, $translated_quiz_id, 'llms_quiz');
                 } else {
                     $this->log('❌ Failed to mark quiz ' . $translated_quiz_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
@@ -428,6 +440,9 @@ class WPML_LLMS_Progress_Sync {
                         
                         if ($completion_result) {
                             $this->log('✅ Synced lesson ' . $target_lesson_id . ' completion from enrollment progress', 'success');
+                            
+                            // Clear progress cache for this lesson and its course
+                            $this->clear_progress_cache($user_id, $target_lesson_id, 'lesson');
                         }
                     }
                 }
@@ -448,6 +463,9 @@ class WPML_LLMS_Progress_Sync {
                         
                         if ($completion_result) {
                             $this->log('✅ Synced quiz ' . $target_quiz_id . ' completion from enrollment progress', 'success');
+                            
+                            // Clear progress cache for this quiz and its course
+                            $this->clear_progress_cache($user_id, $target_quiz_id, 'llms_quiz');
                         }
                     }
                 }
@@ -512,6 +530,9 @@ class WPML_LLMS_Progress_Sync {
                 if ($completion_result) {
                     $synced_count++;
                     $this->log('✅ Marked ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
+                    
+                    // Clear progress cache for this object
+                    $this->clear_progress_cache($user_id, $translated_object_id, $object_type);
                 } else {
                     $this->log('❌ Failed to mark ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
@@ -585,6 +606,9 @@ class WPML_LLMS_Progress_Sync {
                 if ($incompletion_result) {
                     $synced_count++;
                     $this->log('✅ Marked ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ') as incomplete for user ' . $user_id, 'success');
+                    
+                    // Clear progress cache for this object
+                    $this->clear_progress_cache($user_id, $translated_object_id, $object_type);
                 } else {
                     $this->log('❌ Failed to mark ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ') as incomplete for user ' . $user_id, 'error');
                 }
@@ -668,6 +692,86 @@ class WPML_LLMS_Progress_Sync {
             $timestamp = current_time('Y-m-d H:i:s');
             $log_message = "[{$timestamp}] WPML-LLMS Progress Sync ({$level}): {$message}";
             error_log($log_message);
+        }
+    }
+    
+    /**
+     * Clear progress cache for a specific object and related objects
+     * This ensures progress bars are updated immediately after sync
+     * 
+     * @param int $user_id User ID
+     * @param int $object_id Object ID (lesson, course, section, quiz)
+     * @param string $object_type Object type
+     */
+    private function clear_progress_cache($user_id, $object_id, $object_type) {
+        try {
+            $student = new LLMS_Student($user_id);
+            
+            // Clear cache for the specific object
+            switch ($object_type) {
+                case 'lesson':
+                    // Clear lesson cache (if any)
+                    $student->delete('lesson_' . $object_id . '_progress');
+                    
+                    // Clear section cache for the section containing this lesson
+                    $lesson = new LLMS_Lesson($object_id);
+                    $section_id = $lesson->get_parent_section();
+                    if ($section_id) {
+                        $student->delete('section_' . $section_id . '_progress');
+                        $this->log('Cleared section progress cache for section ' . $section_id, 'info');
+                    }
+                    
+                    // Clear course cache for the course containing this lesson
+                    $course_id = $lesson->get_parent_course();
+                    if ($course_id) {
+                        $student->delete('course_' . $course_id . '_progress');
+                        $this->log('Cleared course progress cache for course ' . $course_id, 'info');
+                    }
+                    break;
+                    
+                case 'section':
+                    // Clear section cache
+                    $student->delete('section_' . $object_id . '_progress');
+                    
+                    // Clear course cache for the course containing this section
+                    $section = new LLMS_Section($object_id);
+                    $course_id = $section->get_parent_course();
+                    if ($course_id) {
+                        $student->delete('course_' . $course_id . '_progress');
+                        $this->log('Cleared course progress cache for course ' . $course_id, 'info');
+                    }
+                    break;
+                    
+                case 'course':
+                    // Clear course cache
+                    $student->delete('course_' . $object_id . '_progress');
+                    break;
+                    
+                case 'llms_quiz':
+                    // Clear quiz cache (if any)
+                    $student->delete('llms_quiz_' . $object_id . '_progress');
+                    
+                    // Clear course cache for the course containing this quiz
+                    $quiz = new LLMS_Quiz($object_id);
+                    $lesson_id = $quiz->get('lesson_id');
+                    if ($lesson_id) {
+                        $lesson = new LLMS_Lesson($lesson_id);
+                        $course_id = $lesson->get_parent_course();
+                        if ($course_id) {
+                            $student->delete('course_' . $course_id . '_progress');
+                            $this->log('Cleared course progress cache for course ' . $course_id . ' (via quiz)', 'info');
+                        }
+                    }
+                    break;
+            }
+            
+            // Force refresh of any cached progress data
+            wp_cache_delete($user_id, 'llms_student_progress');
+            
+            $this->log('✅ Cleared progress cache for ' . $object_type . ' ' . $object_id . ' (user ' . $user_id . ')', 'success');
+            
+        } catch (Exception $e) {
+            $this->log('Error clearing progress cache: ' . $e->getMessage(), 'error');
         }
     }
 }
