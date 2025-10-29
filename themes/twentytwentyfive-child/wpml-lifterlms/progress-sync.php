@@ -54,6 +54,9 @@ class WPML_LLMS_Progress_Sync {
         
         // Hook into course unenrollment
         add_action('llms_user_removed_from_course', array($this, 'sync_course_unenrollment_progress'), 10, 2);
+        
+        // CRITICAL: Hook into is_complete filter to check across all translated lessons
+        add_filter('llms_is_lesson_complete', array($this, 'check_lesson_complete_across_translations'), 10, 4);
     }
     
     /**
@@ -820,6 +823,78 @@ class WPML_LLMS_Progress_Sync {
         } catch (Exception $e) {
             $this->log('❌ Error clearing all course progress cache: ' . $e->getMessage(), 'error');
         }
+    }
+
+    /**
+     * CRITICAL METHOD: Check lesson completion across ALL translated versions
+     * 
+     * This is the core fix for progress bar synchronization.
+     * When LifterLMS checks if a lesson is complete, we intercept that check
+     * and also look for completion in ALL translated versions of that lesson.
+     * 
+     * @param bool $is_complete Original completion status
+     * @param int $lesson_id Lesson ID being checked
+     * @param string $type Object type (should be 'lesson')
+     * @param LLMS_Student $student Student object
+     * @return bool True if lesson is complete in ANY language version
+     */
+    public function check_lesson_complete_across_translations($is_complete, $lesson_id, $type, $student) {
+        // If already complete, no need to check further
+        if ($is_complete) {
+            return $is_complete;
+        }
+        
+        // Only process lessons
+        if ($type !== 'lesson') {
+            return $is_complete;
+        }
+        
+        try {
+            // Get all translated versions of this lesson
+            $active_languages = apply_filters('wpml_active_languages', null);
+            
+            if (!$active_languages) {
+                return $is_complete;
+            }
+            
+            foreach ($active_languages as $lang_code => $lang_info) {
+                $translated_lesson_id = apply_filters('wpml_object_id', $lesson_id, 'lesson', false, $lang_code);
+                
+                if ($translated_lesson_id && $translated_lesson_id != $lesson_id) {
+                    // Check if this translated lesson is complete using direct database query
+                    if ($this->is_lesson_complete_in_database($student->get_id(), $translated_lesson_id)) {
+                        $this->log('✅ Found lesson ' . $lesson_id . ' completed in translation ' . $translated_lesson_id . ' (' . $lang_code . ')', 'info');
+                        return true; // Found completion in another language!
+                    }
+                }
+            }
+            
+        } catch (Exception $e) {
+            $this->log('❌ Error checking lesson completion across translations: ' . $e->getMessage(), 'error');
+        }
+        
+        return $is_complete;
+    }
+
+    /**
+     * Check if a lesson is complete in the database directly
+     * 
+     * @param int $user_id User ID
+     * @param int $lesson_id Lesson ID
+     * @return bool True if lesson is complete
+     */
+    private function is_lesson_complete_in_database($user_id, $lesson_id) {
+        global $wpdb;
+        
+        $result = $wpdb->get_var($wpdb->prepare(
+            "SELECT meta_value FROM {$wpdb->prefix}lifterlms_user_postmeta 
+             WHERE user_id = %d AND post_id = %d AND meta_key = '_is_complete' 
+             ORDER BY updated_date DESC LIMIT 1",
+            $user_id,
+            $lesson_id
+        ));
+        
+        return ($result === 'yes');
     }
 }
 
