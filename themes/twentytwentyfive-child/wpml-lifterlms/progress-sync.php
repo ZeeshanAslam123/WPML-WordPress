@@ -102,7 +102,7 @@ class WPML_LLMS_Progress_Sync {
                     $synced_count++;
                     $this->log('✅ Marked lesson ' . $translated_lesson_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
                     
-                    // Clear progress cache for course and section containing this lesson
+                    // Clear progress cache for lesson, section, and course
                     $this->clear_progress_cache($user_id, $translated_lesson_id, 'lesson');
                 } else {
                     $this->log('❌ Failed to mark lesson ' . $translated_lesson_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
@@ -111,6 +111,9 @@ class WPML_LLMS_Progress_Sync {
             
             if ($synced_count > 0) {
                 $this->log('✅ Successfully synced lesson progress to ' . $synced_count . ' translated lessons', 'success');
+                
+                // CRITICAL: Clear course progress cache for ALL translated courses
+                $this->clear_all_course_progress_cache($user_id, $lesson_id);
                 
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_lesson_progress_synced', $user_id, $lesson_id, $translations, $synced_count);
@@ -772,6 +775,50 @@ class WPML_LLMS_Progress_Sync {
             
         } catch (Exception $e) {
             $this->log('Error clearing progress cache: ' . $e->getMessage(), 'error');
+        }
+    }
+
+    /**
+     * Clear course progress cache for ALL translated courses
+     * 
+     * This is critical for fixing progress bar display across languages.
+     * When a lesson is completed, we need to clear course progress cache
+     * for ALL language versions of the course.
+     * 
+     * @param int $user_id User ID
+     * @param int $lesson_id Original lesson ID
+     */
+    private function clear_all_course_progress_cache($user_id, $lesson_id) {
+        try {
+            $student = new LLMS_Student($user_id);
+            
+            // Get the course ID from the lesson
+            $lesson = new LLMS_Lesson($lesson_id);
+            $course_id = $lesson->get_parent_course();
+            
+            if (!$course_id) {
+                return;
+            }
+            
+            // Get all translated versions of this course
+            $active_languages = apply_filters('wpml_active_languages', null);
+            
+            foreach ($active_languages as $lang_code => $lang_info) {
+                $translated_course_id = apply_filters('wpml_object_id', $course_id, 'course', false, $lang_code);
+                
+                if ($translated_course_id && $translated_course_id != $course_id) {
+                    // Clear course progress cache for this translated course
+                    $student->set('course_' . $translated_course_id . '_progress', '');
+                    $this->log('🔄 Cleared course progress cache for course ' . $translated_course_id . ' (' . $lang_code . ')', 'info');
+                }
+            }
+            
+            // Also clear the original course cache
+            $student->set('course_' . $course_id . '_progress', '');
+            $this->log('✅ Cleared course progress cache for all translated courses', 'success');
+            
+        } catch (Exception $e) {
+            $this->log('❌ Error clearing all course progress cache: ' . $e->getMessage(), 'error');
         }
     }
 }
