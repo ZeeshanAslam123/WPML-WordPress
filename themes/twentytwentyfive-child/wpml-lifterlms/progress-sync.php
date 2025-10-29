@@ -58,8 +58,8 @@ class WPML_LLMS_Progress_Sync {
         // CRITICAL: Hook into is_complete filter to check across all translated lessons
         add_filter('llms_is_lesson_complete', array($this, 'check_lesson_complete_across_translations'), 10, 4);
         
-        // CRITICAL: Hook into quiz attempts retrieval to sync across all translated quizzes
-        add_filter('llms_student_get_quiz_data', array($this, 'sync_quiz_attempts_across_translations'), 10, 2);
+        // CRITICAL: Hook into template loading to override attempts for dropdown sync
+        add_action('template_redirect', array($this, 'override_quiz_attempts_for_dropdown'), 1);
         
         // CRITICAL: Hook into template loading to sync attempt data across translations
         add_action('lifterlms_single_quiz_before_summary', array($this, 'sync_current_attempt_data'), 5);
@@ -904,44 +904,105 @@ class WPML_LLMS_Progress_Sync {
     }
 
     /**
-     * CRITICAL METHOD: Sync quiz attempts across ALL translated versions
+     * CRITICAL METHOD: Override quiz attempts for dropdown synchronization
      * 
-     * This fixes the quiz attempt dropdown synchronization issue.
-     * When LifterLMS retrieves quiz attempts, we intercept that retrieval
-     * and also get attempts from ALL translated versions of that quiz.
-     * 
-     * @param array $attempts Original attempts array
-     * @param LLMS_Quiz $quiz Quiz object
-     * @return array Combined attempts from all language versions
+     * This is the core fix for the quiz attempt dropdown synchronization issue.
+     * Instead of trying to hook into the query system (which doesn't work when there
+     * are no attempts for the current quiz ID), we override the template loading
+     * and directly modify how attempts are retrieved.
      */
-    public function sync_quiz_attempts_across_translations($attempts, $quiz) {
+    public function override_quiz_attempts_for_dropdown() {
+        // Only run on quiz pages
+        if (!is_singular('llms_quiz')) {
+            return;
+        }
+        
+        // Hook into the template loading to override the attempts variable
+        add_action('wp', array($this, 'modify_quiz_attempts_in_template'), 20);
+    }
+    
+    /**
+     * Modify quiz attempts in template by overriding the get_attempts_by_quiz method
+     */
+    public function modify_quiz_attempts_in_template() {
+        // Use output buffering to capture and modify the template
+        add_filter('llms_get_template_part', array($this, 'intercept_quiz_results_template'), 10, 3);
+    }
+    
+    /**
+     * Intercept the quiz results template to inject our synchronized attempts
+     */
+    public function intercept_quiz_results_template($template, $slug, $name) {
+        if ($slug === 'quiz' && $name === 'results') {
+            // Start output buffering to capture the template
+            ob_start(array($this, 'modify_quiz_results_output'));
+        }
+        return $template;
+    }
+    
+    /**
+     * Modify the quiz results output to include synchronized attempts
+     */
+    public function modify_quiz_results_output($buffer) {
         try {
-            // Get the current quiz ID
-            $quiz_id = $quiz->get('id');
+            // Get current quiz and student
+            $quiz = llms_get_post(get_the_ID());
+            $student = llms_get_student();
             
+            if (!$quiz || !$student) {
+                return $buffer;
+            }
+            
+            // Get synchronized attempts from all languages
+            $synchronized_attempts = $this->get_synchronized_quiz_attempts($quiz->get('id'), $student);
+            
+            if (empty($synchronized_attempts)) {
+                return $buffer;
+            }
+            
+            // If the original template shows no attempts dropdown, inject our own
+            if (strpos($buffer, 'id="llms-quiz-attempt-select"') === false && count($synchronized_attempts) > 1) {
+                // Create the attempts dropdown HTML
+                $dropdown_html = $this->create_attempts_dropdown_html($synchronized_attempts);
+                
+                // Inject the dropdown into the template
+                $buffer = str_replace(
+                    '<div class="llms-quiz-results">',
+                    '<div class="llms-quiz-results">' . $dropdown_html,
+                    $buffer
+                );
+                
+                $this->log("✅ Injected synchronized attempts dropdown with " . count($synchronized_attempts) . " attempts", 'info');
+            }
+            
+            return $buffer;
+            
+        } catch (Exception $e) {
+            $this->log('❌ Error modifying quiz results output: ' . $e->getMessage(), 'error');
+            return $buffer;
+        }
+    }
+    
+    /**
+     * Get synchronized quiz attempts from all translated versions
+     */
+    private function get_synchronized_quiz_attempts($quiz_id, $student) {
+        try {
             // Get all translated versions of this quiz
             $active_languages = apply_filters('wpml_active_languages', null);
-            
             if (!$active_languages) {
-                return $attempts;
+                return array();
             }
             
-            // Get current student
-            $student = llms_get_student();
-            if (!$student) {
-                return $attempts;
-            }
+            $all_attempts = array();
             
             // Collect attempts from all translated quiz versions
-            $all_attempts = $attempts; // Start with current attempts
-            $processed_quiz_ids = array($quiz_id); // Track processed IDs to avoid duplicates
-            
             foreach ($active_languages as $lang_code => $lang_info) {
                 $translated_quiz_id = apply_filters('wpml_object_id', $quiz_id, 'quiz', false, $lang_code);
                 
-                if ($translated_quiz_id && $translated_quiz_id != $quiz_id && !in_array($translated_quiz_id, $processed_quiz_ids)) {
+                if ($translated_quiz_id) {
                     // Get attempts from this translated quiz
-                    $translated_attempts = $student->quizzes()->get_attempts_by_quiz(
+                    $attempts = $student->quizzes()->get_attempts_by_quiz(
                         $translated_quiz_id,
                         array(
                             'per_page' => 25,
@@ -951,30 +1012,72 @@ class WPML_LLMS_Progress_Sync {
                         )
                     );
                     
-                    if (!empty($translated_attempts)) {
-                        $all_attempts = array_merge($all_attempts, $translated_attempts);
-                        $this->log('✅ Found ' . count($translated_attempts) . ' quiz attempts from translation ' . $translated_quiz_id . ' (' . $lang_code . ')', 'info');
+                    if (!empty($attempts)) {
+                        $this->log("✅ Found " . count($attempts) . " attempts from quiz {$translated_quiz_id} (language: {$lang_code})", 'info');
+                        $all_attempts = array_merge($all_attempts, $attempts);
                     }
-                    
-                    $processed_quiz_ids[] = $translated_quiz_id;
                 }
             }
             
-            // Sort all attempts by attempt number (descending)
+            // Sort all attempts by attempt number (descending - newest first)
             if (!empty($all_attempts)) {
                 usort($all_attempts, function($a, $b) {
                     return $b->get('attempt') - $a->get('attempt');
                 });
                 
-                $this->log('✅ Quiz attempt dropdown sync: Combined ' . count($all_attempts) . ' attempts from all languages', 'info');
+                $this->log("✅ Synchronized " . count($all_attempts) . " total attempts from all languages", 'info');
             }
             
             return $all_attempts;
             
         } catch (Exception $e) {
-            $this->log('❌ Error syncing quiz attempts across translations: ' . $e->getMessage(), 'error');
-            return $attempts;
+            $this->log('❌ Error getting synchronized quiz attempts: ' . $e->getMessage(), 'error');
+            return array();
         }
+    }
+    
+    /**
+     * Create the attempts dropdown HTML
+     */
+    private function create_attempts_dropdown_html($attempts) {
+        if (empty($attempts)) {
+            return '';
+        }
+        
+        $html = '<div class="llms-quiz-attempt-select-wrapper" style="margin-bottom: 20px;">';
+        $html .= '<label for="llms-quiz-attempt-select">' . __('View Previous Attempts:', 'lifterlms') . '</label>';
+        $html .= '<select id="llms-quiz-attempt-select" onchange="if(this.value) window.location.href=this.value;">';
+        $html .= '<option value="">' . __('-- Select an Attempt --', 'lifterlms') . '</option>';
+        
+        foreach ($attempts as $attempt) {
+            $grade = $attempt->get('grade');
+            $status = $attempt->get('status');
+            $attempt_number = $attempt->get('attempt');
+            $permalink = $attempt->get_permalink();
+            
+            $status_text = '';
+            if ($status === 'pass') {
+                $status_text = __('Passed', 'lifterlms');
+            } elseif ($status === 'fail') {
+                $status_text = __('Failed', 'lifterlms');
+            } else {
+                $status_text = ucfirst($status);
+            }
+            
+            $option_text = sprintf(
+                __('Attempt #%d - %s%% (%s)', 'lifterlms'),
+                $attempt_number,
+                round($grade, 2),
+                $status_text
+            );
+            
+            $html .= '<option value="' . esc_url($permalink) . '">' . esc_html($option_text) . '</option>';
+        }
+        
+        $html .= '</select>';
+        $html .= '</div>';
+        
+        return $html;
     }
 
     /**
