@@ -29,8 +29,8 @@ class WPML_LLMS_Admin_Menu {
         
         add_submenu_page(
             'edit.php?post_type=course', // Parent slug (WPML main menu)
-            __('LifterLMS', 'twentytwentyfive-child'),        // Page title
-            __('LifterLMS', 'twentytwentyfive-child'),        // Menu title
+            __('LLMS - WPML Fixes', 'twentytwentyfive-child'),        // Page title
+            __('LLMS - WPML Fixes', 'twentytwentyfive-child'),        // Menu title
             'manage_options',                                  // Capability
             'wpml-lifterlms',                                 // Menu slug
             array($this, 'render_admin_page')                 // Callback

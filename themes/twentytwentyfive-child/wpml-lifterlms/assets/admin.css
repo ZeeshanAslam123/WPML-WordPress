@@ -1,0 +1,178 @@
+/* WPML LifterLMS Admin Styles */
+.wpml-llms-admin-header {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.wpml-llms-admin-header h2 {
+    margin-top: 0;
+    color: #23282d;
+}
+
+.wpml-llms-admin-header p {
+    color: #666;
+    font-size: 14px;
+}
+
+.wpml-llms-course-fixer {
+    max-width: 1200px;
+}
+
+.wpml-llms-fixer-description {
+    background: #f9f9f9;
+    border-left: 4px solid #0073aa;
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 0 4px 4px 0;
+}
+
+.wpml-llms-fixer-description p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.wpml-llms-fixer-controls {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.control-group {
+    margin-bottom: 20px;
+}
+
+.control-group:last-child {
+    margin-bottom: 0;
+}
+
+.control-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #23282d;
+}
+
+.course-selector {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px 12px;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.fix-button {
+    background: #0073aa;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.fix-button:hover {
+    background: #005a87;
+}
+
+.fix-button:disabled {
+    background: #ccd0d4;
+    cursor: not-allowed;
+}
+
+.progress-container {
+    margin: 20px 0;
+    display: none;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #f1f1f1;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 15px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0073aa, #00a0d2);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    margin: 10px 0;
+}
+
+.logs-container {
+    margin-top: 20px;
+    display: none;
+}
+
+.logs-header {
+    background: #f9f9f9;
+    padding: 10px 15px;
+    border: 1px solid #ccd0d4;
+    border-bottom: none;
+    font-weight: 600;
+    color: #23282d;
+}
+
+.logs-content {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 15px;
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding: 2px 0;
+}
+
+.log-entry.success {
+    color: #46b450;
+}
+
+.log-entry.error {
+    color: #dc3232;
+}
+
+.log-entry.info {
+    color: #0073aa;
+}
+
+.log-entry.warning {
+    color: #ffb900;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .wpml-llms-admin-header {
+        padding: 15px;
+    }
+    
+    .wpml-llms-fixer-controls {
+        padding: 15px;
+    }
+    
+    .course-selector {
+        max-width: 100%;
+    }
+}

@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define constants
-define('WPML_LLMS_CHILD_THEME_VERSION', '1.0.0');
+define('WPML_LLMS_CHILD_THEME_VERSION', rand( 54545, 99797 ) );
 define('WPML_LLMS_CHILD_THEME_PATH', get_stylesheet_directory());
 define('WPML_LLMS_CHILD_THEME_URL', get_stylesheet_directory_uri());
 
@@ -87,6 +87,13 @@ function wpml_llms_enqueue_admin_assets($hook) {
     if (strpos($hook, 'wpml-lifterlms') === false) {
         return;
     }
+
+    wp_enqueue_style(
+        'wpml-llms-admin-css',
+        WPML_LLMS_CHILD_THEME_URL . '/wpml-lifterlms/assets/admin.css',
+        array(),
+        WPML_LLMS_CHILD_THEME_VERSION
+    );
     
     wp_enqueue_script(
         'wpml-llms-admin-js',
