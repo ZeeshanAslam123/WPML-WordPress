@@ -40,39 +40,6 @@ function twentytwentyfive_child_enqueue_styles() {
 }
 add_action('wp_enqueue_scripts', 'twentytwentyfive_child_enqueue_styles');
 
-/**
- * Check if required plugins are active
- */
-function wpml_llms_check_required_plugins() {
-    $required_plugins = array(
-        'WPML' => class_exists('SitePress'),
-        'LifterLMS' => class_exists('LifterLMS')
-    );
-    
-    return $required_plugins;
-}
-
-/**
- * Admin notice for missing plugins
- */
-function wpml_llms_admin_notices() {
-    $plugins = wpml_llms_check_required_plugins();
-    $missing = array();
-    
-    foreach ($plugins as $plugin => $active) {
-        if (!$active) {
-            $missing[] = $plugin;
-        }
-    }
-    
-    if (!empty($missing)) {
-        echo '<div class="notice notice-warning is-dismissible">';
-        echo '<p><strong>WPML LifterLMS Child Theme:</strong> The following required plugins are not active: ' . implode(', ', $missing) . '</p>';
-        echo '</div>';
-    }
-}
-add_action('admin_notices', 'wpml_llms_admin_notices');
-
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/admin-menu.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/ajax-handlers.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/course-fixer.php';
