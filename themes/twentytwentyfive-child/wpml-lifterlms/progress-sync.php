@@ -57,6 +57,9 @@ class WPML_LLMS_Progress_Sync {
         
         // CRITICAL: Hook into is_complete filter to check across all translated lessons
         add_filter('llms_is_lesson_complete', array($this, 'check_lesson_complete_across_translations'), 10, 4);
+        
+        // CRITICAL: Hook into quiz attempts retrieval to sync across all translated quizzes
+        add_action('init', array($this, 'setup_quiz_attempt_sync'), 20);
     }
     
     /**
@@ -895,6 +898,104 @@ class WPML_LLMS_Progress_Sync {
         ));
         
         return ($result === 'yes');
+    }
+    
+    /**
+     * Setup quiz attempt synchronization hooks
+     */
+    public function setup_quiz_attempt_sync() {
+        // Hook into the student quiz data filter to sync attempts across translations
+        add_filter('llms_student_get_quiz_data', array($this, 'sync_quiz_attempts_across_translations'), 10, 2);
+    }
+    
+    /**
+     * CRITICAL METHOD: Sync quiz attempts across all translated versions
+     * 
+     * This fixes the issue where quiz attempt dropdowns only show attempts from the current language.
+     * When LifterLMS requests quiz attempts, we also get attempts from all translated quiz versions
+     * and merge them together so the dropdown shows ALL attempts regardless of language.
+     * 
+     * @param array $quiz_data The quiz data being retrieved
+     * @param LLMS_Student $student The student object
+     * @return array Modified quiz data with attempts from all translations
+     */
+    public function sync_quiz_attempts_across_translations($quiz_data, $student) {
+        try {
+            // Only process if we have attempts data
+            if (!isset($quiz_data['attempts']) || !is_array($quiz_data['attempts'])) {
+                return $quiz_data;
+            }
+            
+            $attempts = $quiz_data['attempts'];
+            
+            // If we already have attempts, get the quiz ID from the first attempt
+            // If no attempts, we need to determine the quiz ID from context
+            $quiz_id = null;
+            
+            if (!empty($attempts)) {
+                $quiz_id = $attempts[0]->get('quiz_id');
+            } else {
+                // Try to get quiz ID from current context
+                if (is_singular('llms_quiz')) {
+                    $quiz_id = get_the_ID();
+                } else {
+                    // Can't determine quiz ID, return original data
+                    return $quiz_data;
+                }
+            }
+            
+            // Get all translated versions of this quiz
+            $active_languages = apply_filters('wpml_active_languages', null);
+            if (!$active_languages) {
+                return $quiz_data;
+            }
+            
+            // Collect attempts from all translated quiz versions
+            $all_attempts = $attempts; // Start with current attempts
+            $processed_quiz_ids = array($quiz_id); // Track processed IDs to avoid duplicates
+            
+            foreach ($active_languages as $lang_code => $lang_info) {
+                $translated_quiz_id = apply_filters('wpml_object_id', $quiz_id, 'quiz', false, $lang_code);
+                
+                if ($translated_quiz_id && !in_array($translated_quiz_id, $processed_quiz_ids)) {
+                    $processed_quiz_ids[] = $translated_quiz_id;
+                    
+                    // Get attempts from this translated quiz
+                    $translated_attempts = $student->quizzes()->get_attempts_by_quiz(
+                        $translated_quiz_id,
+                        array(
+                            'per_page' => 25,
+                            'sort'     => array(
+                                'attempt' => 'DESC',
+                            ),
+                        )
+                    );
+                    
+                    if (!empty($translated_attempts)) {
+                        $this->log("✅ Found " . count($translated_attempts) . " attempts from translated quiz {$translated_quiz_id} (language: {$lang_code})", 'info');
+                        $all_attempts = array_merge($all_attempts, $translated_attempts);
+                    }
+                }
+            }
+            
+            // Sort all attempts by attempt number (descending - newest first)
+            if (!empty($all_attempts) && count($all_attempts) > count($attempts)) {
+                usort($all_attempts, function($a, $b) {
+                    return $b->get('attempt') - $a->get('attempt');
+                });
+                
+                // Update the quiz data with synchronized attempts
+                $quiz_data['attempts'] = $all_attempts;
+                
+                $this->log('✅ Quiz attempt dropdown sync: Combined ' . count($all_attempts) . ' attempts from all languages', 'info');
+            }
+            
+            return $quiz_data;
+            
+        } catch (Exception $e) {
+            $this->log('❌ Error syncing quiz attempts across translations: ' . $e->getMessage(), 'error');
+            return $quiz_data;
+        }
     }
 }
 
