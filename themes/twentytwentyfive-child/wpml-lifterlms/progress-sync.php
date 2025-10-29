@@ -60,6 +60,9 @@ class WPML_LLMS_Progress_Sync {
         
         // CRITICAL: Hook into quiz attempts retrieval to sync across all translated quizzes
         add_filter('llms_student_get_quiz_data', array($this, 'sync_quiz_attempts_across_translations'), 10, 2);
+        
+        // CRITICAL: Hook into template loading to sync attempt data across translations
+        add_action('lifterlms_single_quiz_before_summary', array($this, 'sync_current_attempt_data'), 5);
     }
     
     /**
@@ -971,6 +974,99 @@ class WPML_LLMS_Progress_Sync {
         } catch (Exception $e) {
             $this->log('❌ Error syncing quiz attempts across translations: ' . $e->getMessage(), 'error');
             return $attempts;
+        }
+    }
+
+    /**
+     * CRITICAL METHOD: Sync current attempt data across translations
+     * 
+     * This fixes the issue where attempt data (grades, results) differs between languages.
+     * When viewing an attempt that shows 0% or incomplete status, we check if there's a 
+     * completed attempt from a translated quiz version and redirect to that instead.
+     */
+    public function sync_current_attempt_data() {
+        try {
+            // Only run on quiz results pages with attempt_key
+            $attempt_key = llms_filter_input_sanitize_string(INPUT_GET, 'attempt_key');
+            if (!$attempt_key) {
+                return;
+            }
+            
+            // Get current student and attempt
+            $student = llms_get_student();
+            if (!$student) {
+                return;
+            }
+            
+            $current_attempt = $student->quizzes()->get_attempt_by_key($attempt_key);
+            if (!$current_attempt) {
+                return;
+            }
+            
+            // Check if current attempt has poor data (0% grade or incomplete status)
+            $current_grade = $current_attempt->get('grade');
+            $current_status = $current_attempt->get('status');
+            
+            // If current attempt has good data, no need to sync
+            if ($current_grade > 0 || in_array($current_status, array('passed', 'complete'))) {
+                return;
+            }
+            
+            $this->log("🔍 Current attempt shows poor data (grade: {$current_grade}%, status: {$current_status}). Checking translations...", 'info');
+            
+            // Current attempt has poor data - check translations
+            $quiz_id = $current_attempt->get('quiz_id');
+            $student_id = $current_attempt->get('student_id');
+            $attempt_number = $current_attempt->get('attempt');
+            
+            // Get all translated versions of this quiz
+            $active_languages = apply_filters('wpml_active_languages', null);
+            if (!$active_languages) {
+                return;
+            }
+            
+            // Check attempts from all translated quiz versions
+            foreach ($active_languages as $lang_code => $lang_info) {
+                $translated_quiz_id = apply_filters('wpml_object_id', $quiz_id, 'quiz', false, $lang_code);
+                
+                if ($translated_quiz_id && $translated_quiz_id != $quiz_id) {
+                    // Get attempts from this translated quiz
+                    $translated_attempts = $student->quizzes()->get_attempts_by_quiz(
+                        $translated_quiz_id,
+                        array(
+                            'per_page' => 25,
+                            'sort'     => array(
+                                'attempt' => 'DESC',
+                            ),
+                        )
+                    );
+                    
+                    // Look for an attempt with the same attempt number but better data
+                    foreach ($translated_attempts as $translated_attempt) {
+                        if ($translated_attempt->get('attempt') == $attempt_number) {
+                            $translated_grade = $translated_attempt->get('grade');
+                            $translated_status = $translated_attempt->get('status');
+                            
+                            // If translated attempt has better data, redirect to it
+                            if ($translated_grade > $current_grade || in_array($translated_status, array('passed', 'complete'))) {
+                                $better_attempt_url = $translated_attempt->get_permalink();
+                                
+                                $this->log("✅ Found better attempt data in translation {$translated_quiz_id} (grade: {$translated_grade}%, status: {$translated_status}). Redirecting...", 'info');
+                                
+                                // Use JavaScript redirect to avoid header issues
+                                echo '<script type="text/javascript">
+                                    console.log("WPML-LifterLMS: Redirecting to better attempt data...");
+                                    window.location.href = "' . esc_url($better_attempt_url) . '";
+                                </script>';
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            
+        } catch (Exception $e) {
+            $this->log('❌ Error syncing current attempt data: ' . $e->getMessage(), 'error');
         }
     }
 }
