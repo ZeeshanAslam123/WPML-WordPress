@@ -710,46 +710,46 @@ class WPML_LLMS_Progress_Sync {
             // Clear cache for the specific object
             switch ($object_type) {
                 case 'lesson':
-                    // Clear lesson cache (if any)
-                    $student->delete('lesson_' . $object_id . '_progress');
+                    // Clear lesson cache (if any) - set to empty string to trigger recalculation
+                    $student->set('lesson_' . $object_id . '_progress', '');
                     
                     // Clear section cache for the section containing this lesson
                     $lesson = new LLMS_Lesson($object_id);
                     $section_id = $lesson->get_parent_section();
                     if ($section_id) {
-                        $student->delete('section_' . $section_id . '_progress');
+                        $student->set('section_' . $section_id . '_progress', '');
                         $this->log('Cleared section progress cache for section ' . $section_id, 'info');
                     }
                     
                     // Clear course cache for the course containing this lesson
                     $course_id = $lesson->get_parent_course();
                     if ($course_id) {
-                        $student->delete('course_' . $course_id . '_progress');
+                        $student->set('course_' . $course_id . '_progress', '');
                         $this->log('Cleared course progress cache for course ' . $course_id, 'info');
                     }
                     break;
                     
                 case 'section':
                     // Clear section cache
-                    $student->delete('section_' . $object_id . '_progress');
+                    $student->set('section_' . $object_id . '_progress', '');
                     
                     // Clear course cache for the course containing this section
                     $section = new LLMS_Section($object_id);
                     $course_id = $section->get_parent_course();
                     if ($course_id) {
-                        $student->delete('course_' . $course_id . '_progress');
+                        $student->set('course_' . $course_id . '_progress', '');
                         $this->log('Cleared course progress cache for course ' . $course_id, 'info');
                     }
                     break;
                     
                 case 'course':
                     // Clear course cache
-                    $student->delete('course_' . $object_id . '_progress');
+                    $student->set('course_' . $object_id . '_progress', '');
                     break;
                     
                 case 'llms_quiz':
                     // Clear quiz cache (if any)
-                    $student->delete('llms_quiz_' . $object_id . '_progress');
+                    $student->set('llms_quiz_' . $object_id . '_progress', '');
                     
                     // Clear course cache for the course containing this quiz
                     $quiz = new LLMS_Quiz($object_id);
@@ -758,7 +758,7 @@ class WPML_LLMS_Progress_Sync {
                         $lesson = new LLMS_Lesson($lesson_id);
                         $course_id = $lesson->get_parent_course();
                         if ($course_id) {
-                            $student->delete('course_' . $course_id . '_progress');
+                            $student->set('course_' . $course_id . '_progress', '');
                             $this->log('Cleared course progress cache for course ' . $course_id . ' (via quiz)', 'info');
                         }
                     }
