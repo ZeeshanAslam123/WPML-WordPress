@@ -73,31 +73,31 @@ function wpml_llms_admin_notices() {
 }
 add_action('admin_notices', 'wpml_llms_admin_notices');
 
-require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/admin-menu.php';
-require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/ajax-handlers.php';
-require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/course-fixer.php';
-require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/enrollment-sync.php';
-require_once WPML_LLMS_CHILD_THEME_PATH . '/wpml-lifterlms/progress-sync.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/admin-menu.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/ajax-handlers.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/course-fixer.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/enrollment-sync.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/progress-sync.php';
 
 /**
  * Enqueue admin assets
  */
 function wpml_llms_enqueue_admin_assets($hook) {
     // Only load on our admin page
-    if (strpos($hook, 'wpml-lifterlms') === false) {
+    if (strpos($hook, 'ldninjas-customization') === false) {
         return;
     }
 
     wp_enqueue_style(
         'wpml-llms-admin-css',
-        WPML_LLMS_CHILD_THEME_URL . '/wpml-lifterlms/assets/admin.css',
+        WPML_LLMS_CHILD_THEME_URL . '/ldninjas-customization/assets/admin.css',
         array(),
         WPML_LLMS_CHILD_THEME_VERSION
     );
     
     wp_enqueue_script(
         'wpml-llms-admin-js',
-        WPML_LLMS_CHILD_THEME_URL . '/wpml-lifterlms/assets/admin.js',
+        WPML_LLMS_CHILD_THEME_URL . '/ldninjas-customization/assets/admin.js',
         array('jquery'),
         WPML_LLMS_CHILD_THEME_VERSION,
         true
