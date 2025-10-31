@@ -49,8 +49,13 @@ class WPML_LLMS_Auto_Course_Fixer {
         // Primary hook - WPML translation completion (most targeted)
         add_action('wpml_pro_translation_completed', array($this, 'on_translation_completed'), 10, 3);
         
+        // Additional WPML hooks for different translation methods
+        add_action('icl_make_duplicate', array($this, 'on_wpml_duplicate'), 10, 4);
+        
         // Backup hook - save_post for manual translations (lower priority)
         add_action('save_post_course', array($this, 'on_course_saved'), 25, 3);
+        add_action('save_post_section', array($this, 'on_section_saved'), 25, 3);
+        add_action('save_post_lesson', array($this, 'on_lesson_saved'), 25, 3);
         
         // Clean up processed courses cache periodically
         add_action('wp_scheduled_delete', array($this, 'cleanup_cache'));
@@ -64,16 +69,49 @@ class WPML_LLMS_Auto_Course_Fixer {
      * @param object $job Translation job object
      */
     public function on_translation_completed($new_post_id, $fields, $job) {
-        // Validate post type
+        // Log all translation completions for debugging
         $post = get_post($new_post_id);
-        if (!$post || $post->post_type !== 'course') {
+        $post_type = $post ? $post->post_type : 'unknown';
+        $this->log('WPML translation completed - Post ID: ' . $new_post_id . ', Type: ' . $post_type, 'info');
+        
+        // Handle different post types that are part of a course
+        if (!$post) {
             return;
         }
         
-        $this->log('Translation completed for course: ' . $post->post_title . ' (ID: ' . $new_post_id . ')', 'info');
+        $course_related_types = array('course', 'section', 'lesson', 'llms_quiz');
         
-        // Execute the relationship fix directly
-        $this->execute_relationship_fix($new_post_id, 'translation_completed');
+        if (!in_array($post->post_type, $course_related_types)) {
+            return;
+        }
+        
+        $this->log('Translation completed for ' . $post->post_type . ': ' . $post->post_title . ' (ID: ' . $new_post_id . ')', 'info');
+        
+        // Find the related course and execute the fix
+        $this->handle_course_related_translation($new_post_id, $post->post_type);
+    }
+    
+    /**
+     * Handle WPML duplicate creation (icl_make_duplicate hook)
+     * 
+     * @param int $master_post_id Original post ID
+     * @param string $lang Target language
+     * @param array $postarr Post data
+     * @param int $id New duplicate post ID
+     */
+    public function on_wpml_duplicate($master_post_id, $lang, $postarr, $id) {
+        $post = get_post($id);
+        if (!$post) {
+            return;
+        }
+        
+        $this->log('WPML duplicate created - Original: ' . $master_post_id . ', New: ' . $id . ', Type: ' . $post->post_type . ', Lang: ' . $lang, 'info');
+        
+        $course_related_types = array('course', 'section', 'lesson', 'llms_quiz');
+        
+        if (in_array($post->post_type, $course_related_types)) {
+            $this->handle_course_related_translation($id, $post->post_type);
+        }
     }
     
     /**
@@ -104,6 +142,98 @@ class WPML_LLMS_Auto_Course_Fixer {
         
         // Execute the relationship fix directly
         $this->execute_relationship_fix($post_id, 'course_saved');
+    }
+    
+    /**
+     * Handle section save events
+     */
+    public function on_section_saved($post_id, $post, $update) {
+        if (!$update || wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+            return;
+        }
+        
+        $language = $this->get_post_language($post_id);
+        if ($language === 'en' || !$language) {
+            return;
+        }
+        
+        $this->log('Section saved: ' . $post->post_title . ' (ID: ' . $post_id . ', Lang: ' . $language . ')', 'info');
+        $this->handle_course_related_translation($post_id, 'section');
+    }
+    
+    /**
+     * Handle lesson save events
+     */
+    public function on_lesson_saved($post_id, $post, $update) {
+        if (!$update || wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
+            return;
+        }
+        
+        $language = $this->get_post_language($post_id);
+        if ($language === 'en' || !$language) {
+            return;
+        }
+        
+        $this->log('Lesson saved: ' . $post->post_title . ' (ID: ' . $post_id . ', Lang: ' . $language . ')', 'info');
+        $this->handle_course_related_translation($post_id, 'lesson');
+    }
+    
+    /**
+     * Handle translation completion for course-related content
+     * 
+     * @param int $translated_post_id The translated post ID
+     * @param string $post_type The post type that was translated
+     */
+    private function handle_course_related_translation($translated_post_id, $post_type) {
+        $course_id = null;
+        
+        switch ($post_type) {
+            case 'course':
+                $course_id = $translated_post_id;
+                break;
+                
+            case 'section':
+                // Get the parent course for this section
+                $parent_course = get_post_meta($translated_post_id, '_llms_parent_course', true);
+                if ($parent_course) {
+                    // Get the English version of the parent course
+                    $course_id = apply_filters('wpml_object_id', $parent_course, 'course', false, 'en');
+                }
+                break;
+                
+            case 'lesson':
+                // Get the parent section, then the parent course
+                $parent_section = get_post_meta($translated_post_id, '_llms_parent_section', true);
+                if ($parent_section) {
+                    $parent_course = get_post_meta($parent_section, '_llms_parent_course', true);
+                    if ($parent_course) {
+                        $course_id = apply_filters('wpml_object_id', $parent_course, 'course', false, 'en');
+                    }
+                }
+                break;
+                
+            case 'llms_quiz':
+                // Get the parent lesson, then section, then course
+                $parent_lesson = get_post_meta($translated_post_id, '_llms_parent_lesson', true);
+                if ($parent_lesson) {
+                    $parent_section = get_post_meta($parent_lesson, '_llms_parent_section', true);
+                    if ($parent_section) {
+                        $parent_course = get_post_meta($parent_section, '_llms_parent_course', true);
+                        if ($parent_course) {
+                            $course_id = apply_filters('wpml_object_id', $parent_course, 'course', false, 'en');
+                        }
+                    }
+                }
+                break;
+        }
+        
+        if ($course_id) {
+            $this->log('Found related English course ID: ' . $course_id . ' for ' . $post_type . ' ' . $translated_post_id, 'info');
+            // Use the translated post to find the course, but fix relationships for the English course
+            $this->execute_relationship_fix($translated_post_id, 'translation_completed_' . $post_type);
+        } else {
+            $this->log('Could not find related English course for ' . $post_type . ' ' . $translated_post_id, 'warning');
+        }
     }
     
     /**
@@ -277,7 +407,10 @@ class WPML_LLMS_Auto_Course_Fixer {
             'processed_courses' => $this->processed_courses,
             'hooks_registered' => array(
                 'wpml_pro_translation_completed',
-                'save_post_course'
+                'icl_make_duplicate',
+                'save_post_course',
+                'save_post_section',
+                'save_post_lesson'
             )
         );
     }
@@ -300,7 +433,11 @@ class WPML_LLMS_Auto_Course_Fixer {
         $checks['course_fixer_available'] = class_exists('WPML_LLMS_Course_Fixer');
         
         // Check if hooks are properly registered
-        $checks['hooks_registered'] = has_action('wpml_pro_translation_completed') && has_action('save_post_course');
+        $checks['hooks_registered'] = has_action('wpml_pro_translation_completed') && 
+                                     has_action('icl_make_duplicate') &&
+                                     has_action('save_post_course') &&
+                                     has_action('save_post_section') &&
+                                     has_action('save_post_lesson');
         
         // Check if required WPML functions exist
         $checks['wpml_functions_available'] = function_exists('wpml_get_language_information') && 
