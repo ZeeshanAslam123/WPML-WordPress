@@ -52,9 +52,6 @@ class WPML_LLMS_Auto_Course_Fixer {
         // Backup hook - save_post for manual translations (lower priority)
         add_action('save_post_course', array($this, 'on_course_saved'), 25, 3);
         
-        // Scheduled event handler for delayed execution
-        add_action('wpml_llms_auto_fix_course', array($this, 'execute_auto_fix'));
-        
         // Clean up processed courses cache periodically
         add_action('wp_scheduled_delete', array($this, 'cleanup_cache'));
     }
@@ -75,8 +72,8 @@ class WPML_LLMS_Auto_Course_Fixer {
         
         $this->log('Translation completed for course: ' . $post->post_title . ' (ID: ' . $new_post_id . ')', 'info');
         
-        // Schedule the relationship fix
-        $this->schedule_relationship_fix($new_post_id, 'translation_completed');
+        // Execute the relationship fix directly
+        $this->execute_relationship_fix($new_post_id, 'translation_completed');
     }
     
     /**
@@ -105,17 +102,17 @@ class WPML_LLMS_Auto_Course_Fixer {
         
         $this->log('Course saved: ' . $post->post_title . ' (ID: ' . $post_id . ', Lang: ' . $language . ')', 'info');
         
-        // Schedule the relationship fix with lower priority
-        $this->schedule_relationship_fix($post_id, 'course_saved');
+        // Execute the relationship fix directly
+        $this->execute_relationship_fix($post_id, 'course_saved');
     }
     
     /**
-     * Schedule relationship fix with optimizations
+     * Execute relationship fix with optimizations
      * 
      * @param int $translated_course_id The translated course ID
      * @param string $trigger What triggered this fix
      */
-    private function schedule_relationship_fix($translated_course_id, $trigger = 'unknown') {
+    private function execute_relationship_fix($translated_course_id, $trigger = 'unknown') {
         // Get the original English course
         $original_id = apply_filters('wpml_object_id', $translated_course_id, 'course', false, 'en');
         
@@ -137,20 +134,10 @@ class WPML_LLMS_Auto_Course_Fixer {
         // Mark as being processed
         $this->processed_courses[$cache_key] = time();
         
-        // Clear any existing scheduled events for this course
-        wp_clear_scheduled_hook('wpml_llms_auto_fix_course', array($original_id));
+        $this->log('Executing auto-fix for course ' . $original_id . ' (trigger: ' . $trigger . ')', 'info');
         
-        // Schedule with appropriate delay based on trigger
-        $delay = ($trigger === 'translation_completed') ? 30 : 60; // Shorter delay for translation completion
-        $scheduled_time = time() + $delay;
-        
-        $scheduled = wp_schedule_single_event($scheduled_time, 'wpml_llms_auto_fix_course', array($original_id));
-        
-        if ($scheduled) {
-            $this->log('Scheduled auto-fix for course ' . $original_id . ' in ' . $delay . 's (trigger: ' . $trigger . ')', 'success');
-        } else {
-            $this->log('Failed to schedule auto-fix for course ' . $original_id, 'error');
-        }
+        // Execute the fix immediately
+        $this->execute_auto_fix($original_id);
     }
     
     /**
@@ -290,8 +277,7 @@ class WPML_LLMS_Auto_Course_Fixer {
             'processed_courses' => $this->processed_courses,
             'hooks_registered' => array(
                 'wpml_pro_translation_completed',
-                'save_post_course',
-                'wpml_llms_auto_fix_course'
+                'save_post_course'
             )
         );
     }
@@ -313,8 +299,8 @@ class WPML_LLMS_Auto_Course_Fixer {
         // Check if course fixer is available
         $checks['course_fixer_available'] = class_exists('WPML_LLMS_Course_Fixer');
         
-        // Check if WP Cron is working
-        $checks['wp_cron_working'] = !defined('DISABLE_WP_CRON') || !DISABLE_WP_CRON;
+        // Check if hooks are properly registered
+        $checks['hooks_registered'] = has_action('wpml_pro_translation_completed') && has_action('save_post_course');
         
         // Check if required WPML functions exist
         $checks['wpml_functions_available'] = function_exists('wpml_get_language_information') && 
