@@ -462,6 +462,11 @@ class WPML_LLMS_Auto_Course_Fixer {
 // Initialize the auto-fixer (singleton pattern)
 WPML_LLMS_Auto_Course_Fixer::get_instance();
 
+// Debug: Write to a custom log file to verify our code is running
+if (function_exists('error_log')) {
+    error_log('[WPML-AUTO-FIXER] Auto-fixer file loaded and initialized at ' . date('Y-m-d H:i:s'), 3, get_stylesheet_directory() . '/auto-fixer-debug.log');
+}
+
 /**
  * Helper function to get auto-fixer instance
  * 
