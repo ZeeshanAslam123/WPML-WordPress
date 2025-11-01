@@ -47,13 +47,6 @@ require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/auto-course-f
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/enrollment-sync.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/progress-sync.php';
 
-// Initialize the auto course fixer
-add_action('init', function() {
-    if (class_exists('WPML_LLMS_Auto_Course_Fixer')) {
-        WPML_LLMS_Auto_Course_Fixer::get_instance();
-    }
-});
-
 /**
  * Enqueue admin assets
  */
@@ -93,15 +86,6 @@ function wpml_llms_enqueue_admin_assets($hook) {
 add_action('admin_enqueue_scripts', 'wpml_llms_enqueue_admin_assets');
 
 /**
- * Add theme support and customizations
- */
-function twentytwentyfive_child_theme_setup() {
-    // Add theme support for features if needed
-    // This function can be extended for additional theme customizations
-}
-add_action('after_setup_theme', 'twentytwentyfive_child_theme_setup');
-
-/**
  * Utility function to log messages
  */
 function wpml_llms_log($message, $type = 'info') {
@@ -113,37 +97,4 @@ function wpml_llms_log($message, $type = 'info') {
             wp_debug_backtrace_summary($log_message);
         }
     }
-}
-
-/**
- * Get English courses for the course selector
- */
-function wpml_llms_get_english_courses() {
-    $courses = array();
-    
-    if (class_exists('LLMS_Course')) {
-        $args = array(
-            'post_type' => 'course',
-            'post_status' => 'publish',
-            'posts_per_page' => -1,
-            'meta_query' => array(
-                array(
-                    'key' => 'wpml_language',
-                    'value' => 'en',
-                    'compare' => '='
-                )
-            )
-        );
-        
-        $course_posts = get_posts($args);
-        
-        foreach ($course_posts as $course_post) {
-            $courses[] = array(
-                'id' => $course_post->ID,
-                'title' => $course_post->post_title
-            );
-        }
-    }
-    
-    return $courses;
 }

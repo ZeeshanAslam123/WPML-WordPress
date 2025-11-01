@@ -217,13 +217,4 @@ class WPML_LLMS_Auto_Course_Fixer {
 }
 
 // Auto-fixer class loaded - initialization handled by functions.php
-
-/**
- * Helper function to get auto-fixer instance
- * 
- * @return WPML_LLMS_Auto_Course_Fixer
- */
-function wpml_llms_get_auto_fixer() {
-    return WPML_LLMS_Auto_Course_Fixer::get_instance();
-}
-
+WPML_LLMS_Auto_Course_Fixer::get_instance();
