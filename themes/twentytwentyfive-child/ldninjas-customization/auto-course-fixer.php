@@ -42,10 +42,8 @@ class WPML_LLMS_Auto_Course_Fixer {
      * Initialize hooks - simple and direct
      */
     private function init_hooks() {
-        // Primary hook - save_post catches all post saves including WPML translations
+
         add_action('save_post', array($this, 'on_post_saved'), 20, 3);
-        
-        // WPML translation completion hook as backup
         add_action('wpml_pro_translation_completed', array($this, 'on_translation_completed'), 10, 3);
     }
     
@@ -62,13 +60,11 @@ class WPML_LLMS_Auto_Course_Fixer {
             return;
         }
         
-        // Only process course-related content
         $course_related_types = array('course', 'section', 'lesson', 'llms_quiz');
         if (!in_array($post->post_type, $course_related_types)) {
             return;
         }
         
-        // Find the course and fix relationships
         $this->fix_relationships_for_post($new_post_id, $post->post_type);
     }
     
@@ -80,24 +76,21 @@ class WPML_LLMS_Auto_Course_Fixer {
      * @param bool $update Whether this is an update
      */
     public function on_post_saved($post_id, $post, $update) {
-        // Skip autosaves and revisions
+
         if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
             return;
         }
         
-        // Only process course-related content
         $course_related_types = array('course', 'section', 'lesson', 'llms_quiz');
         if (!in_array($post->post_type, $course_related_types)) {
             return;
         }
         
-        // Get post language - only process non-English posts
         $language = $this->get_post_language($post_id);
         if (!$language || $language === 'en') {
             return;
         }
         
-        // Fix relationships for this post
         $this->fix_relationships_for_post($post_id, $post->post_type);
     }
     
@@ -108,23 +101,15 @@ class WPML_LLMS_Auto_Course_Fixer {
      * @param string $post_type Post type
      */
     private function fix_relationships_for_post($post_id, $post_type) {
-        // Find the English course ID
+
         $english_course_id = $this->find_english_course_id($post_id, $post_type);
         
         if (!$english_course_id) {
             return;
         }
-        
-        // Use the exact same logic as the manual "Fix Relationships" button
-        try {
-            $fixer = new WPML_LLMS_Course_Fixer();
-            $result = $fixer->fix_course_relationships($english_course_id);
-            
 
-            
-        } catch (Exception $e) {
-            // Handle error silently
-        }
+        $fixer = new WPML_LLMS_Course_Fixer();
+        $fixer->fix_course_relationships($english_course_id);
     }
     
     /**
@@ -135,26 +120,22 @@ class WPML_LLMS_Auto_Course_Fixer {
      * @return int|null English course ID or null if not found
      */
     private function find_english_course_id($post_id, $post_type) {
-        // Get the English version of this post
+
         $english_post_id = apply_filters('wpml_object_id', $post_id, $post_type, false, 'en');
         
         if (!$english_post_id) {
             return null;
         }
         
-        // If it's already a course, return it
         if ($post_type === 'course') {
             return $english_post_id;
         }
         
-        // For sections, lessons, quizzes - find the parent course
         switch ($post_type) {
             case 'section':
-                // Section -> Course
                 return get_post_meta($english_post_id, '_llms_parent_course', true);
                 
             case 'lesson':
-                // Lesson -> Section -> Course
                 $parent_section = get_post_meta($english_post_id, '_llms_parent_section', true);
                 if ($parent_section) {
                     return get_post_meta($parent_section, '_llms_parent_course', true);
@@ -162,7 +143,6 @@ class WPML_LLMS_Auto_Course_Fixer {
                 break;
                 
             case 'llms_quiz':
-                // Quiz -> Lesson -> Section -> Course
                 $parent_lesson = get_post_meta($english_post_id, '_llms_parent_lesson', true);
                 if ($parent_lesson) {
                     $parent_section = get_post_meta($parent_lesson, '_llms_parent_section', true);
@@ -183,13 +163,12 @@ class WPML_LLMS_Auto_Course_Fixer {
      * @return string|null Language code or null
      */
     private function get_post_language($post_id) {
-        // Get the post type to construct the correct element type
+
         $post = get_post($post_id);
         if (!$post) {
             return null;
         }
         
-        // Method 1: Use WPML filter (preferred)
         $element_type = 'post_' . $post->post_type;
         $language = apply_filters('wpml_element_language_code', null, array(
             'element_id' => $post_id,
@@ -200,7 +179,6 @@ class WPML_LLMS_Auto_Course_Fixer {
             return $language;
         }
         
-        // Method 2: Fallback to WPML function
         if (function_exists('wpml_get_language_information')) {
             $lang_info = wpml_get_language_information(null, $post_id);
             return isset($lang_info['language_code']) ? $lang_info['language_code'] : null;
@@ -210,5 +188,4 @@ class WPML_LLMS_Auto_Course_Fixer {
     }
 }
 
-// Auto-fixer class loaded - initialization handled by functions.php
 WPML_LLMS_Auto_Course_Fixer::get_instance();

@@ -59,56 +59,34 @@ class WPML_LLMS_Course_Fixer {
      */
     public function fix_course_relationships($course_id) {
         
-        try {
-            // Validate course exists
-            $course = get_post($course_id);
-            if (!$course || $course->post_type !== 'course') {
-                throw new Exception('Invalid course ID: ' . $course_id);
-            }
-            
-            
-            // Get course translations
-            $translations = $this->get_course_translations($course_id);
-            
-            // Fix WPML relationships
-            $this->fix_wpml_relationships($course_id, $translations);
-            
-            // Sync course sections
-            $this->sync_course_sections($course_id, $translations);
-            
-            // Sync course lessons
-            $this->sync_course_lessons($course_id, $translations);
-            
-            // Sync course quizzes
-            $this->sync_course_quizzes($course_id, $translations);
-            
-            // Sync access plans
-            $this->sync_access_plans($course_id, $translations);
-            
-            // Sync enrollments
-            $this->sync_course_enrollments($course_id, $translations);
-            
-            // Update course metadata
-            $this->sync_course_metadata($course_id, $translations);
-            
-            $this->stats['courses_processed']++;
-            $this->stats['end_time'] = current_time('mysql');
-            
-            
-            return array(
-                'success' => true,
-                'stats' => $this->stats
-            );
-            
-        } catch (Exception $e) {
-            $this->stats['errors']++;
-            
-            return array(
-                'success' => false,
-                'error' => $e->getMessage(),
-                'stats' => $this->stats
-            );
+        $course = get_post($course_id);
+        if (!$course || $course->post_type !== 'course') {
+            throw new Exception('Invalid course ID: ' . $course_id);
         }
+        
+        $translations = $this->get_course_translations($course_id);
+        
+        $this->fix_wpml_relationships($course_id, $translations);
+        
+        $this->sync_course_sections($course_id, $translations);
+        
+        $this->sync_course_lessons($course_id, $translations);
+        
+        $this->sync_course_quizzes($course_id, $translations);
+        
+        $this->sync_access_plans($course_id, $translations);
+        
+        $this->sync_course_enrollments($course_id, $translations);
+        
+        $this->sync_course_metadata($course_id, $translations);
+        
+        $this->stats['courses_processed']++;
+        $this->stats['end_time'] = current_time('mysql');
+        
+        return array(
+            'success' => true,
+            'stats' => $this->stats
+        );
     }
     
     /**
@@ -121,7 +99,6 @@ class WPML_LLMS_Course_Fixer {
             return $translations;
         }
         
-        // Get all active languages
         $languages = apply_filters('wpml_active_languages', null);
         
         foreach ($languages as $lang_code => $language) {
@@ -182,7 +159,6 @@ class WPML_LLMS_Course_Fixer {
                     
                     $this->stats['relationships_fixed']++;
                 }
-            } else {
             }
         }
     }
@@ -215,7 +191,6 @@ class WPML_LLMS_Course_Fixer {
                     if ($current_parent_course != $translation['id']) {
                         update_post_meta($translated_section_id, '_llms_parent_course', $translation['id']);
                         $this->stats['sections_synced']++;
-                    } else {
                     }
                     
                     // Fix section order meta key (critical for LifterLMS to find sections)
@@ -224,14 +199,10 @@ class WPML_LLMS_Course_Fixer {
                         $current_section_order = get_post_meta($translated_section_id, '_llms_order', true);
                         if ($current_section_order != $main_section_order) {
                             update_post_meta($translated_section_id, '_llms_order', $main_section_order);
-                        } else {
                         }
-                    } else {
                     }
-                } else {
                 }
             }
-            
         }
     }
     
@@ -253,7 +224,6 @@ class WPML_LLMS_Course_Fixer {
         
         foreach ($translations as $lang_code => $translation) {
             
-            // Sync lesson relationships
             foreach ($main_lessons as $lesson_id) {
                 $translated_lesson_id = apply_filters('wpml_object_id', $lesson_id, 'lesson', false, $lang_code);
                 
@@ -274,11 +244,8 @@ class WPML_LLMS_Course_Fixer {
                             $current_parent_section = get_post_meta($translated_lesson_id, '_llms_parent_section', true);
                             if ($current_parent_section != $translated_section_id) {
                                 update_post_meta($translated_lesson_id, '_llms_parent_section', $translated_section_id);
-                            } else {
                             }
-                        } else {
                         }
-                    } else {
                     }
                     
                     // Fix lesson order meta key (critical for LifterLMS ordering)
@@ -287,16 +254,12 @@ class WPML_LLMS_Course_Fixer {
                         $current_lesson_order = get_post_meta($translated_lesson_id, '_llms_order', true);
                         if ($current_lesson_order != $main_lesson_order) {
                             update_post_meta($translated_lesson_id, '_llms_order', $main_lesson_order);
-                        } else {
                         }
-                    } else {
                     }
                     
                     $this->stats['lessons_synced']++;
-                } else {
                 }
             }
-            
         }
     }
     
@@ -318,21 +281,19 @@ class WPML_LLMS_Course_Fixer {
         
         foreach ($translations as $lang_code => $translation) {
             
-            // Process each lesson to find and sync quizzes
             foreach ($main_lessons as $main_lesson) {
                 if (!$main_lesson->has_quiz()) {
-                    continue; // Skip lessons without quizzes
+                    continue;
                 }
                 
                 $main_quiz = $main_lesson->get_quiz();
                 if (!$main_quiz) {
-                    continue; // Skip if quiz object not found
+                    continue;
                 }
                 
                 $main_lesson_id = $main_lesson->get('id');
                 $main_quiz_id = $main_quiz->get('id');
                 
-                // Find translated lesson and quiz
                 $translated_lesson_id = apply_filters('wpml_object_id', $main_lesson_id, 'lesson', false, $lang_code);
                 $translated_quiz_id = apply_filters('wpml_object_id', $main_quiz_id, 'llms_quiz', false, $lang_code);
                 
@@ -340,7 +301,6 @@ class WPML_LLMS_Course_Fixer {
                     $translated_lesson_id !== $main_lesson_id && 
                     $translated_quiz_id !== $main_quiz_id) {
                     
-                    // Fix lesson → quiz relationship
                     $translated_lesson = llms_get_post($translated_lesson_id);
                     if ($translated_lesson) {
                         $current_lesson_quiz = $translated_lesson->get('quiz');
@@ -349,8 +309,7 @@ class WPML_LLMS_Course_Fixer {
                         } else {
                         }
                     }
-                    
-                    // Fix quiz → lesson relationship
+
                     $translated_quiz = llms_get_post($translated_quiz_id);
                     if ($translated_quiz) {
                         $current_quiz_lesson = $translated_quiz->get('lesson_id');
@@ -360,19 +319,12 @@ class WPML_LLMS_Course_Fixer {
                         }
                     }
                     
-                    $this->stats['quizzes_synced']++;
-                    
-                } else {
-                    if (!$translated_lesson_id) {
-                    }
-                    if (!$translated_quiz_id) {
-                    }
+                    $this->stats['quizzes_synced']++;   
                 }
             }
             
         }
         
-        // Now sync quiz-question relationships
         $this->sync_quiz_questions($course_id, $translations);
     }
     
@@ -408,9 +360,8 @@ class WPML_LLMS_Course_Fixer {
                 $translated_question_id = apply_filters('wpml_object_id', $orig_question_id, 'llms_question', false, $lang_code);
                 
                 if (!$translated_question_id || $translated_question_id == $orig_question_id) {
-                    continue; // Skip if no translation found or this is the original
+                    continue;
                 }
-                
                 
                 // Get the original parent quiz ID from the original question
                 $orig_quiz_id = get_post_meta($orig_question_id, '_llms_parent_id', true);
@@ -448,10 +399,8 @@ class WPML_LLMS_Course_Fixer {
             
             if ($questions_fixed > 0) {
                 $this->stats['questions_synced'] += $questions_fixed;
-            } else {
             }
         }
-        
         
         // Verify quiz-question relationships after sync
         $this->verify_quiz_questions($course_id, $translations);
@@ -462,9 +411,9 @@ class WPML_LLMS_Course_Fixer {
      * Based on your actual LifterLMS meta structure analysis
      */
     private function sync_question_choices($orig_question_id, $translated_question_id) {
+        
         global $wpdb;
-        
-        
+
         // Get ALL meta keys from original question that start with _llms_choice_
         $choice_meta_keys = $wpdb->get_results($wpdb->prepare("
             SELECT meta_key, meta_value 
@@ -479,34 +428,23 @@ class WPML_LLMS_Course_Fixer {
         $synced_choices = 0;
         
         foreach ($choice_meta_keys as $meta) {
+
             $current_value = get_post_meta($translated_question_id, $meta->meta_key, true);
-            
-            // Log what we're comparing
-            
-            // Skip if values are the same
             if ($current_value === $meta->meta_value) {
                 continue;
             }
-            
-            // Handle serialized data correctly - unserialize first, then let WordPress serialize it properly
+
             $value_to_store = $meta->meta_value;
             
-            // Check if this is a serialized value that needs to be unserialized
             if (is_serialized($meta->meta_value)) {
                 $unserialized_value = maybe_unserialize($meta->meta_value);
                 if ($unserialized_value !== false) {
                     $value_to_store = $unserialized_value;
                 }
             }
-            
-            // Update the meta value - WordPress will serialize arrays automatically
+
             update_post_meta($translated_question_id, $meta->meta_key, $value_to_store);
             $synced_choices++;
-            
-        }
-        
-        if ($synced_choices > 0) {
-        } else {
         }
     }
     
@@ -515,6 +453,7 @@ class WPML_LLMS_Course_Fixer {
      * Based on your analysis showing Urdu quiz missing most settings
      */
     private function sync_quiz_meta($orig_quiz_id, $translated_quiz_id) {
+
         global $wpdb;
         
         // Get ALL meta keys from original quiz (excluding lesson_id which should be different)
@@ -591,10 +530,7 @@ class WPML_LLMS_Course_Fixer {
                     continue;
                 }
                 
-                
-                // Update the access plan's product reference
                 $current_product_id = get_post_meta($translated_plan_id, '_llms_product_id', true);
-                
                 
                 if ($current_product_id != $translation['id']) {
                     update_post_meta($translated_plan_id, '_llms_product_id', $translation['id']);
@@ -603,12 +539,7 @@ class WPML_LLMS_Course_Fixer {
                 } else {
                 }
             }
-            
-            if ($plans_synced > 0) {
-            } else {
-            }
         }
-        
     }
     
     /**
@@ -644,8 +575,6 @@ class WPML_LLMS_Course_Fixer {
                 
                 $quiz_verification_count++;
                 $quiz_id = $quiz->get('id');
-                
-                // Use LifterLMS's native method to get questions
                 $questions = $quiz->get_questions('ids');
                 
                 if (empty($questions)) {
@@ -654,11 +583,7 @@ class WPML_LLMS_Course_Fixer {
                     $working_quizzes++;
                 }
             }
-            
-            if ($quiz_verification_count > 0) {
-            }
         }
-        
     }
     
     /**
@@ -682,12 +607,9 @@ class WPML_LLMS_Course_Fixer {
             foreach ($enrolled_students as $student_id) {
                 $student = new LLMS_Student($student_id);
                 
-                // Check if student is already enrolled in translated course
                 if (!$student->is_enrolled($translation['id'])) {
-                    // Enroll student in translated course
                     $student->enroll($translation['id']);
                     $this->stats['enrollments_synced']++;
-                    
                 }
             }
         }
@@ -721,17 +643,13 @@ class WPML_LLMS_Course_Fixer {
             
         }
     }
-    
 
-    
     /**
      * Get processing statistics
      */
     public function get_stats() {
         return $this->stats;
     }
-    
-
     
     /**
      * Clear stats

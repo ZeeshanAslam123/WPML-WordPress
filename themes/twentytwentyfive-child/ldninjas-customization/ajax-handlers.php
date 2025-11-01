@@ -48,21 +48,13 @@ class WPML_LLMS_Ajax_Handlers {
         // Initialize the course fixer
         $fixer = new WPML_LLMS_Course_Fixer();
         
-        try {
-            $result = $fixer->fix_course_relationships($course_id);
-            
-            wp_send_json_success(array(
-                'message' => __('Relationships fixed successfully', 'twentytwentyfive-child'),
-                'logs' => $result['logs'],
-                'stats' => $result['stats']
-            ));
-            
-        } catch (Exception $e) {
-            
-            wp_send_json_error(array(
-                'message' => sprintf(__('Error: %s', 'twentytwentyfive-child'), $e->getMessage())
-            ));
-        }
+        $result = $fixer->fix_course_relationships($course_id);
+        
+        wp_send_json_success(array(
+            'message' => __('Relationships fixed successfully', 'twentytwentyfive-child'),
+            'logs' => $result['logs'],
+            'stats' => $result['stats']
+        ));
     }
     
     /**

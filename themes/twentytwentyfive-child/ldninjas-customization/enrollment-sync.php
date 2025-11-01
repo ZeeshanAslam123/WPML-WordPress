@@ -31,10 +31,8 @@ class WPML_LLMS_Enrollment_Sync {
      * Initialize WordPress hooks
      */
     private function init_hooks() {
-        // Hook into LifterLMS course enrollment
+
         add_action('llms_user_enrolled_in_course', array($this, 'sync_course_enrollment'), 10, 2);
-        
-        // Hook into LifterLMS membership enrollment (if needed in future)
         add_action('llms_user_added_to_membership_level', array($this, 'sync_membership_enrollment'), 10, 2);
     }
     
@@ -45,57 +43,45 @@ class WPML_LLMS_Enrollment_Sync {
      * @param int $course_id Course ID they were enrolled in
      */
     public function sync_course_enrollment($user_id, $course_id) {
-        // Prevent infinite loops
+
         if (doing_action('llms_user_enrolled_in_course') > 1) {
             return;
         }
         
-        // Check if sync is enabled
         if (!$this->is_sync_enabled()) {
             return;
         }
         
+        $translations = $this->get_course_translations($course_id);
         
-        try {
-            // Get all translations of this course
-            $translations = $this->get_course_translations($course_id);
+        if (empty($translations)) {
+            return;
+        }
+        
+        $enrolled_count = 0;
+        
+        foreach ($translations as $lang_code => $translation_data) {
+            $translated_course_id = $translation_data['id'];
             
-            if (empty($translations)) {
-                return;
+            // Skip if it's the same course (original)
+            if ($translated_course_id == $course_id) {
+                continue;
             }
             
-            $enrolled_count = 0;
-            
-            foreach ($translations as $lang_code => $translation_data) {
-                $translated_course_id = $translation_data['id'];
-                
-                // Skip if it's the same course (original)
-                if ($translated_course_id == $course_id) {
-                    continue;
-                }
-                
-                // Check if user is already enrolled in this translation
-                if (llms_is_user_enrolled($user_id, $translated_course_id)) {
-                    continue;
-                }
-                
-                // Enroll user in translated course
-                $enrollment_result = llms_enroll_student($user_id, $translated_course_id, 'wpml_sync');
-                
-                if ($enrollment_result) {
-                    $enrolled_count++;
-                } else {
-                }
+            if (llms_is_user_enrolled($user_id, $translated_course_id)) {
+                continue;
             }
             
-            if ($enrolled_count > 0) {
-                
-                // Fire custom action for other plugins to hook into
-                do_action('wpml_llms_enrollment_synced', $user_id, $course_id, $translations, $enrolled_count);
-            } else {
-            }
+            $enrollment_result = llms_enroll_student($user_id, $translated_course_id, 'wpml_sync');
             
-        } catch (Exception $e) {
+            if ($enrollment_result) {
+                $enrolled_count++;
+            }
+        }
+        
+        if ($enrolled_count > 0) {
+            
+            do_action('wpml_llms_enrollment_synced', $user_id, $course_id, $translations, $enrolled_count);
         }
     }
     
@@ -106,57 +92,47 @@ class WPML_LLMS_Enrollment_Sync {
      * @param int $membership_id Membership ID they were enrolled in
      */
     public function sync_membership_enrollment($user_id, $membership_id) {
-        // Prevent infinite loops
+
         if (doing_action('llms_user_added_to_membership_level') > 1) {
             return;
         }
         
-        // Check if sync is enabled
         if (!$this->is_sync_enabled()) {
             return;
         }
         
+        $translations = $this->get_membership_translations($membership_id);
         
-        try {
-            // Get all translations of this membership
-            $translations = $this->get_membership_translations($membership_id);
+        if (empty($translations)) {
+            return;
+        }
+        
+        $enrolled_count = 0;
+        
+        foreach ($translations as $lang_code => $translation_data) {
+            $translated_membership_id = $translation_data['id'];
             
-            if (empty($translations)) {
-                return;
+            // Skip if it's the same membership (original)
+            if ($translated_membership_id == $membership_id) {
+                continue;
             }
             
-            $enrolled_count = 0;
-            
-            foreach ($translations as $lang_code => $translation_data) {
-                $translated_membership_id = $translation_data['id'];
-                
-                // Skip if it's the same membership (original)
-                if ($translated_membership_id == $membership_id) {
-                    continue;
-                }
-                
-                // Check if user is already enrolled in this translation
-                if (llms_is_user_enrolled($user_id, $translated_membership_id)) {
-                    continue;
-                }
-                
-                // Enroll user in translated membership
-                $enrollment_result = llms_enroll_student($user_id, $translated_membership_id, 'wpml_sync');
-                
-                if ($enrollment_result) {
-                    $enrolled_count++;
-                } else {
-                }
+            // Check if user is already enrolled in this translation
+            if (llms_is_user_enrolled($user_id, $translated_membership_id)) {
+                continue;
             }
             
-            if ($enrolled_count > 0) {
-                
-                // Fire custom action for other plugins to hook into
-                do_action('wpml_llms_membership_enrollment_synced', $user_id, $membership_id, $translations, $enrolled_count);
-            } else {
-            }
+            // Enroll user in translated membership
+            $enrollment_result = llms_enroll_student($user_id, $translated_membership_id, 'wpml_sync');
             
-        } catch (Exception $e) {
+            if ($enrollment_result) {
+                $enrolled_count++;
+            }
+        }
+        
+        if ($enrolled_count > 0) {
+            
+            do_action('wpml_llms_membership_enrollment_synced', $user_id, $membership_id, $translations, $enrolled_count);
         }
     }
     
@@ -232,11 +208,6 @@ class WPML_LLMS_Enrollment_Sync {
     private function is_sync_enabled() {
         return get_option('wpml_llms_enrollment_sync_enabled', true);
     }
-    
-
-    
-
 }
 
-// Initialize the enrollment synchronizer
 new WPML_LLMS_Enrollment_Sync();
