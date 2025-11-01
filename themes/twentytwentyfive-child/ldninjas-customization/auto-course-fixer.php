@@ -54,10 +54,8 @@ class WPML_LLMS_Auto_Course_Fixer {
         // Additional WPML hooks for different translation methods
         add_action('icl_make_duplicate', array($this, 'on_wpml_duplicate'), 10, 4);
         
-        // Backup hook - save_post for manual translations (lower priority)
-        add_action('save_post_course', array($this, 'on_course_saved'), 25, 3);
-        add_action('save_post_section', array($this, 'on_section_saved'), 25, 3);
-        add_action('save_post_lesson', array($this, 'on_lesson_saved'), 25, 3);
+        // More reliable hooks - save_post for all course-related content
+        add_action('save_post', array($this, 'on_post_saved'), 25, 3);
         
         // Clean up processed courses cache periodically
         add_action('wp_scheduled_delete', array($this, 'cleanup_cache'));
@@ -120,67 +118,40 @@ class WPML_LLMS_Auto_Course_Fixer {
     }
     
     /**
-     * Handle course save events (backup for manual translations)
+     * Handle any post save events - comprehensive handler for all course-related content
      * 
      * @param int $post_id Post ID
      * @param WP_Post $post Post object
      * @param bool $update Whether this is an update
      */
-    public function on_course_saved($post_id, $post, $update) {
-        // Only process updates, not new posts
-        if (!$update) {
-            return;
-        }
-        
+    public function on_post_saved($post_id, $post, $update) {
         // Skip if this is an autosave or revision
         if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
             return;
         }
         
-        // Check if this is a translated course (not English)
+        // Only handle course-related post types
+        $course_related_types = array('course', 'section', 'lesson', 'llms_quiz');
+        if (!in_array($post->post_type, $course_related_types)) {
+            return;
+        }
+        
+        // Check if this is a translated post (not English)
         $language = $this->get_post_language($post_id);
         if ($language === 'en' || !$language) {
-            return; // Skip English courses and unknown languages
+            return; // Skip English posts and unknown languages
         }
         
-        $this->log('Course saved: ' . $post->post_title . ' (ID: ' . $post_id . ', Lang: ' . $language . ')', 'info');
+        $this->log('Post saved: ' . $post->post_type . ' "' . $post->post_title . '" (ID: ' . $post_id . ', Lang: ' . $language . ', Update: ' . ($update ? 'yes' : 'no') . ')', 'info');
         
-        // Execute the relationship fix directly
-        $this->execute_relationship_fix($post_id, 'course_saved');
-    }
-    
-    /**
-     * Handle section save events
-     */
-    public function on_section_saved($post_id, $post, $update) {
-        if (!$update || wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
-            return;
+        // Handle based on post type
+        if ($post->post_type === 'course') {
+            // For courses, execute fix directly
+            $this->execute_relationship_fix($post_id, 'course_saved');
+        } else {
+            // For sections, lessons, quizzes - find the related course
+            $this->handle_course_related_translation($post_id, $post->post_type);
         }
-        
-        $language = $this->get_post_language($post_id);
-        if ($language === 'en' || !$language) {
-            return;
-        }
-        
-        $this->log('Section saved: ' . $post->post_title . ' (ID: ' . $post_id . ', Lang: ' . $language . ')', 'info');
-        $this->handle_course_related_translation($post_id, 'section');
-    }
-    
-    /**
-     * Handle lesson save events
-     */
-    public function on_lesson_saved($post_id, $post, $update) {
-        if (!$update || wp_is_post_autosave($post_id) || wp_is_post_revision($post_id)) {
-            return;
-        }
-        
-        $language = $this->get_post_language($post_id);
-        if ($language === 'en' || !$language) {
-            return;
-        }
-        
-        $this->log('Lesson saved: ' . $post->post_title . ' (ID: ' . $post_id . ', Lang: ' . $language . ')', 'info');
-        $this->handle_course_related_translation($post_id, 'lesson');
     }
     
     /**
@@ -420,9 +391,7 @@ class WPML_LLMS_Auto_Course_Fixer {
             'hooks_registered' => array(
                 'wpml_pro_translation_completed',
                 'icl_make_duplicate',
-                'save_post_course',
-                'save_post_section',
-                'save_post_lesson'
+                'save_post'
             )
         );
     }
@@ -447,9 +416,7 @@ class WPML_LLMS_Auto_Course_Fixer {
         // Check if hooks are properly registered
         $checks['hooks_registered'] = has_action('wpml_pro_translation_completed') && 
                                      has_action('icl_make_duplicate') &&
-                                     has_action('save_post_course') &&
-                                     has_action('save_post_section') &&
-                                     has_action('save_post_lesson');
+                                     has_action('save_post');
         
         // Check if required WPML functions exist
         $checks['wpml_functions_available'] = function_exists('wpml_get_language_information') && 
