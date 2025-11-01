@@ -29,6 +29,8 @@ class WPML_LLMS_Auto_Course_Fixer {
      * Constructor
      */
     private function __construct() {
+        $this->processed_courses = array();
+        $this->log('WPML_LLMS_Auto_Course_Fixer initialized', 'info');
         $this->init_hooks();
     }
     
@@ -59,6 +61,9 @@ class WPML_LLMS_Auto_Course_Fixer {
         
         // Clean up processed courses cache periodically
         add_action('wp_scheduled_delete', array($this, 'cleanup_cache'));
+        
+        // Test hook to verify our system is working
+        add_action('init', array($this, 'test_hook_firing'));
     }
     
     /**
@@ -176,6 +181,13 @@ class WPML_LLMS_Auto_Course_Fixer {
         
         $this->log('Lesson saved: ' . $post->post_title . ' (ID: ' . $post_id . ', Lang: ' . $language . ')', 'info');
         $this->handle_course_related_translation($post_id, 'lesson');
+    }
+    
+    /**
+     * Test hook to verify our system is working
+     */
+    public function test_hook_firing() {
+        $this->log('Auto-fixer test hook fired on init - system is working!', 'info');
     }
     
     /**
