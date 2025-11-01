@@ -120,16 +120,10 @@ class WPML_LLMS_Auto_Course_Fixer {
             $fixer = new WPML_LLMS_Course_Fixer();
             $result = $fixer->fix_course_relationships($english_course_id);
             
-            // Log success (optional)
-            if (function_exists('wpml_llms_log')) {
-                wpml_llms_log('Auto-fixed relationships for course ' . $english_course_id . ' (triggered by ' . $post_type . ' ' . $post_id . ')', 'success');
-            }
+
             
         } catch (Exception $e) {
-            // Log error (optional)
-            if (function_exists('wpml_llms_log')) {
-                wpml_llms_log('Auto-fix failed for course ' . $english_course_id . ': ' . $e->getMessage(), 'error');
-            }
+            // Handle error silently
         }
     }
     

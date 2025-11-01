@@ -55,14 +55,12 @@ class WPML_LLMS_Enrollment_Sync {
             return;
         }
         
-        $this->log('Starting enrollment sync for user ' . $user_id . ' in course ' . $course_id, 'info');
         
         try {
             // Get all translations of this course
             $translations = $this->get_course_translations($course_id);
             
             if (empty($translations)) {
-                $this->log('No translations found for course ' . $course_id, 'info');
                 return;
             }
             
@@ -78,7 +76,6 @@ class WPML_LLMS_Enrollment_Sync {
                 
                 // Check if user is already enrolled in this translation
                 if (llms_is_user_enrolled($user_id, $translated_course_id)) {
-                    $this->log('User ' . $user_id . ' already enrolled in course ' . $translated_course_id . ' (' . $lang_code . ')', 'info');
                     continue;
                 }
                 
@@ -87,23 +84,18 @@ class WPML_LLMS_Enrollment_Sync {
                 
                 if ($enrollment_result) {
                     $enrolled_count++;
-                    $this->log('✅ Enrolled user ' . $user_id . ' in course ' . $translated_course_id . ' (' . $lang_code . ')', 'success');
                 } else {
-                    $this->log('❌ Failed to enroll user ' . $user_id . ' in course ' . $translated_course_id . ' (' . $lang_code . ')', 'error');
                 }
             }
             
             if ($enrolled_count > 0) {
-                $this->log('✅ Successfully enrolled user in ' . $enrolled_count . ' translated courses', 'success');
                 
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_enrollment_synced', $user_id, $course_id, $translations, $enrolled_count);
             } else {
-                $this->log('No new enrollments needed', 'info');
             }
             
         } catch (Exception $e) {
-            $this->log('Error during enrollment sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -124,14 +116,12 @@ class WPML_LLMS_Enrollment_Sync {
             return;
         }
         
-        $this->log('Starting membership enrollment sync for user ' . $user_id . ' in membership ' . $membership_id, 'info');
         
         try {
             // Get all translations of this membership
             $translations = $this->get_membership_translations($membership_id);
             
             if (empty($translations)) {
-                $this->log('No translations found for membership ' . $membership_id, 'info');
                 return;
             }
             
@@ -147,7 +137,6 @@ class WPML_LLMS_Enrollment_Sync {
                 
                 // Check if user is already enrolled in this translation
                 if (llms_is_user_enrolled($user_id, $translated_membership_id)) {
-                    $this->log('User ' . $user_id . ' already enrolled in membership ' . $translated_membership_id . ' (' . $lang_code . ')', 'info');
                     continue;
                 }
                 
@@ -156,23 +145,18 @@ class WPML_LLMS_Enrollment_Sync {
                 
                 if ($enrollment_result) {
                     $enrolled_count++;
-                    $this->log('✅ Enrolled user ' . $user_id . ' in membership ' . $translated_membership_id . ' (' . $lang_code . ')', 'success');
                 } else {
-                    $this->log('❌ Failed to enroll user ' . $user_id . ' in membership ' . $translated_membership_id . ' (' . $lang_code . ')', 'error');
                 }
             }
             
             if ($enrolled_count > 0) {
-                $this->log('✅ Successfully enrolled user in ' . $enrolled_count . ' translated memberships', 'success');
                 
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_membership_enrollment_synced', $user_id, $membership_id, $translations, $enrolled_count);
             } else {
-                $this->log('No new membership enrollments needed', 'info');
             }
             
         } catch (Exception $e) {
-            $this->log('Error during membership enrollment sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -251,23 +235,7 @@ class WPML_LLMS_Enrollment_Sync {
     
 
     
-    /**
-     * Log messages for debugging
-     * 
-     * @param string $message Log message
-     * @param string $level Log level (info, success, warning, error)
-     */
-    private function log($message, $level = 'info') {
-        // Log to LifterLMS logs if available
-        if (function_exists('llms_log')) {
-            llms_log($message, 'wpml-enrollment-sync');
-        }
-        
-        // Use our main logging function
-        if (function_exists('wpml_llms_log')) {
-            wpml_llms_log('[Enrollment-Sync] ' . $message, $level);
-        }
-    }
+
 }
 
 // Initialize the enrollment synchronizer
