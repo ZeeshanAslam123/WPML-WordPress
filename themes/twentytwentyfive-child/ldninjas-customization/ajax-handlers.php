@@ -58,7 +58,6 @@ class WPML_LLMS_Ajax_Handlers {
             ));
             
         } catch (Exception $e) {
-            wpml_llms_log('Error fixing relationships: ' . $e->getMessage(), 'error');
             
             wp_send_json_error(array(
                 'message' => sprintf(__('Error: %s', 'twentytwentyfive-child'), $e->getMessage())
@@ -217,7 +216,6 @@ class WPML_LLMS_Ajax_Handlers {
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
         );
         
-        wpml_llms_log('AJAX Activity: ' . json_encode($log_entry), 'info');
     }
 }
 

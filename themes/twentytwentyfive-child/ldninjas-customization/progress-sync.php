@@ -71,14 +71,12 @@ class WPML_LLMS_Progress_Sync {
             return;
         }
         
-        $this->log('Starting lesson progress sync for user ' . $user_id . ' in lesson ' . $lesson_id, 'info');
         
         try {
             // Get all translations of this lesson
             $translations = $this->get_lesson_translations($lesson_id);
             
             if (empty($translations)) {
-                $this->log('No translations found for lesson ' . $lesson_id, 'info');
                 return;
             }
             
@@ -94,7 +92,6 @@ class WPML_LLMS_Progress_Sync {
                 
                 // Check if lesson is already completed in this translation
                 if (llms_is_complete($user_id, $translated_lesson_id, 'lesson')) {
-                    $this->log('User ' . $user_id . ' already completed lesson ' . $translated_lesson_id . ' (' . $lang_code . ')', 'info');
                     continue;
                 }
                 
@@ -103,17 +100,14 @@ class WPML_LLMS_Progress_Sync {
                 
                 if ($completion_result) {
                     $synced_count++;
-                    $this->log('✅ Marked lesson ' . $translated_lesson_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
                     
                     // Clear progress cache for lesson, section, and course
                     $this->clear_progress_cache($user_id, $translated_lesson_id, 'lesson');
                 } else {
-                    $this->log('❌ Failed to mark lesson ' . $translated_lesson_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
             }
             
             if ($synced_count > 0) {
-                $this->log('✅ Successfully synced lesson progress to ' . $synced_count . ' translated lessons', 'success');
                 
                 // CRITICAL: Clear course progress cache for ALL translated courses
                 $this->clear_all_course_progress_cache($user_id, $lesson_id);
@@ -121,11 +115,9 @@ class WPML_LLMS_Progress_Sync {
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_lesson_progress_synced', $user_id, $lesson_id, $translations, $synced_count);
             } else {
-                $this->log('No new lesson progress sync needed', 'info');
             }
             
         } catch (Exception $e) {
-            $this->log('Error during lesson progress sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -141,14 +133,12 @@ class WPML_LLMS_Progress_Sync {
             return;
         }
         
-        $this->log('Starting course progress sync for user ' . $user_id . ' in course ' . $course_id, 'info');
         
         try {
             // Get all translations of this course
             $translations = $this->get_object_translations($course_id, 'course');
             
             if (empty($translations)) {
-                $this->log('No translations found for course ' . $course_id, 'info');
                 return;
             }
             
@@ -164,7 +154,6 @@ class WPML_LLMS_Progress_Sync {
                 
                 // Check if course is already completed in this translation
                 if (llms_is_complete($user_id, $translated_course_id, 'course')) {
-                    $this->log('User ' . $user_id . ' already completed course ' . $translated_course_id . ' (' . $lang_code . ')', 'info');
                     continue;
                 }
                 
@@ -173,26 +162,21 @@ class WPML_LLMS_Progress_Sync {
                 
                 if ($completion_result) {
                     $synced_count++;
-                    $this->log('✅ Marked course ' . $translated_course_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
                     
                     // Clear progress cache for this course
                     $this->clear_progress_cache($user_id, $translated_course_id, 'course');
                 } else {
-                    $this->log('❌ Failed to mark course ' . $translated_course_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
             }
             
             if ($synced_count > 0) {
-                $this->log('✅ Successfully synced course progress to ' . $synced_count . ' translated courses', 'success');
                 
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_course_progress_synced', $user_id, $course_id, $translations, $synced_count);
             } else {
-                $this->log('No new course progress sync needed', 'info');
             }
             
         } catch (Exception $e) {
-            $this->log('Error during course progress sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -208,14 +192,12 @@ class WPML_LLMS_Progress_Sync {
             return;
         }
         
-        $this->log('Starting section progress sync for user ' . $user_id . ' in section ' . $section_id, 'info');
         
         try {
             // Get all translations of this section
             $translations = $this->get_object_translations($section_id, 'section');
             
             if (empty($translations)) {
-                $this->log('No translations found for section ' . $section_id, 'info');
                 return;
             }
             
@@ -231,7 +213,6 @@ class WPML_LLMS_Progress_Sync {
                 
                 // Check if section is already completed in this translation
                 if (llms_is_complete($user_id, $translated_section_id, 'section')) {
-                    $this->log('User ' . $user_id . ' already completed section ' . $translated_section_id . ' (' . $lang_code . ')', 'info');
                     continue;
                 }
                 
@@ -240,26 +221,21 @@ class WPML_LLMS_Progress_Sync {
                 
                 if ($completion_result) {
                     $synced_count++;
-                    $this->log('✅ Marked section ' . $translated_section_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
                     
                     // Clear progress cache for this section and its parent course
                     $this->clear_progress_cache($user_id, $translated_section_id, 'section');
                 } else {
-                    $this->log('❌ Failed to mark section ' . $translated_section_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
             }
             
             if ($synced_count > 0) {
-                $this->log('✅ Successfully synced section progress to ' . $synced_count . ' translated sections', 'success');
                 
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_section_progress_synced', $user_id, $section_id, $translations, $synced_count);
             } else {
-                $this->log('No new section progress sync needed', 'info');
             }
             
         } catch (Exception $e) {
-            $this->log('Error during section progress sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -276,14 +252,12 @@ class WPML_LLMS_Progress_Sync {
             return;
         }
         
-        $this->log('Starting quiz progress sync for user ' . $user_id . ' in quiz ' . $quiz_id, 'info');
         
         try {
             // Get all translations of this quiz
             $translations = $this->get_object_translations($quiz_id, 'llms_quiz');
             
             if (empty($translations)) {
-                $this->log('No translations found for quiz ' . $quiz_id, 'info');
                 return;
             }
             
@@ -299,7 +273,6 @@ class WPML_LLMS_Progress_Sync {
                 
                 // Check if quiz is already completed in this translation
                 if (llms_is_complete($user_id, $translated_quiz_id, 'llms_quiz')) {
-                    $this->log('User ' . $user_id . ' already completed quiz ' . $translated_quiz_id . ' (' . $lang_code . ')', 'info');
                     continue;
                 }
                 
@@ -308,26 +281,21 @@ class WPML_LLMS_Progress_Sync {
                 
                 if ($completion_result) {
                     $synced_count++;
-                    $this->log('✅ Marked quiz ' . $translated_quiz_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
                     
                     // Clear progress cache for course containing this quiz
                     $this->clear_progress_cache($user_id, $translated_quiz_id, 'llms_quiz');
                 } else {
-                    $this->log('❌ Failed to mark quiz ' . $translated_quiz_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
             }
             
             if ($synced_count > 0) {
-                $this->log('✅ Successfully synced quiz progress to ' . $synced_count . ' translated quizzes', 'success');
                 
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_quiz_progress_synced', $user_id, $quiz_id, $translations, $synced_count);
             } else {
-                $this->log('No new quiz progress sync needed', 'info');
             }
             
         } catch (Exception $e) {
-            $this->log('Error during quiz progress sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -344,14 +312,12 @@ class WPML_LLMS_Progress_Sync {
             return;
         }
         
-        $this->log('Starting enrollment progress sync for user ' . $user_id . ' in course ' . $course_id, 'info');
         
         try {
             // Get all translations of this course
             $translations = $this->get_object_translations($course_id, 'course');
             
             if (empty($translations)) {
-                $this->log('No translations found for course ' . $course_id, 'info');
                 return;
             }
             
@@ -374,7 +340,6 @@ class WPML_LLMS_Progress_Sync {
                     if ($progress > 0) {
                         $source_progress = $progress;
                         $source_course_id = $translated_course_id;
-                        $this->log('Found existing progress (' . $progress . '%) in course ' . $translated_course_id . ' (' . $lang_code . ')', 'info');
                         break; // Use the first one we find with progress
                     }
                 }
@@ -386,7 +351,6 @@ class WPML_LLMS_Progress_Sync {
             }
             
         } catch (Exception $e) {
-            $this->log('Error during enrollment progress sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -402,13 +366,11 @@ class WPML_LLMS_Progress_Sync {
             return;
         }
         
-        $this->log('Starting unenrollment progress sync for user ' . $user_id . ' in course ' . $course_id, 'info');
         
         // For now, we'll just log this event. In the future, we might want to
         // remove progress from all language versions or handle it differently
         // based on site requirements
         
-        $this->log('User ' . $user_id . ' was unenrolled from course ' . $course_id . '. Progress sync handling can be customized here.', 'info');
     }
     
     /**
@@ -419,7 +381,6 @@ class WPML_LLMS_Progress_Sync {
      * @param int $target_course_id Target course ID (newly enrolled)
      */
     private function sync_detailed_course_progress($user_id, $source_course_id, $target_course_id) {
-        $this->log('Syncing detailed progress from course ' . $source_course_id . ' to course ' . $target_course_id, 'info');
         
         try {
             $student = new LLMS_Student($user_id);
@@ -427,7 +388,6 @@ class WPML_LLMS_Progress_Sync {
             $target_course = llms_get_post($target_course_id);
             
             if (!$source_course || !$target_course) {
-                $this->log('Could not load source or target course objects', 'error');
                 return;
             }
             
@@ -445,7 +405,6 @@ class WPML_LLMS_Progress_Sync {
                         $completion_result = llms_mark_complete($user_id, $target_lesson_id, 'lesson', 'wpml_enrollment_progress_sync');
                         
                         if ($completion_result) {
-                            $this->log('✅ Synced lesson ' . $target_lesson_id . ' completion from enrollment progress', 'success');
                             
                             // Clear progress cache for this lesson and its course
                             $this->clear_progress_cache($user_id, $target_lesson_id, 'lesson');
@@ -468,7 +427,6 @@ class WPML_LLMS_Progress_Sync {
                         $completion_result = llms_mark_complete($user_id, $target_quiz_id, 'llms_quiz', 'wpml_enrollment_progress_sync');
                         
                         if ($completion_result) {
-                            $this->log('✅ Synced quiz ' . $target_quiz_id . ' completion from enrollment progress', 'success');
                             
                             // Clear progress cache for this quiz and its course
                             $this->clear_progress_cache($user_id, $target_quiz_id, 'llms_quiz');
@@ -478,7 +436,6 @@ class WPML_LLMS_Progress_Sync {
             }
             
         } catch (Exception $e) {
-            $this->log('Error during detailed course progress sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -499,18 +456,15 @@ class WPML_LLMS_Progress_Sync {
         // Handle all supported object types
         $supported_types = array('lesson', 'section', 'course', 'llms_quiz');
         if (!in_array($object_type, $supported_types)) {
-            $this->log('Object type ' . $object_type . ' not supported for sync', 'info');
             return;
         }
         
-        $this->log('Starting object progress sync for user ' . $user_id . ' in ' . $object_type . ' ' . $object_id, 'info');
         
         try {
             // Get all translations of this object
             $translations = $this->get_object_translations($object_id, $object_type);
             
             if (empty($translations)) {
-                $this->log('No translations found for ' . $object_type . ' ' . $object_id, 'info');
                 return;
             }
             
@@ -526,7 +480,6 @@ class WPML_LLMS_Progress_Sync {
                 
                 // Check if object is already completed in this translation
                 if (llms_is_complete($user_id, $translated_object_id, $object_type)) {
-                    $this->log('User ' . $user_id . ' already completed ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ')', 'info');
                     continue;
                 }
                 
@@ -535,26 +488,21 @@ class WPML_LLMS_Progress_Sync {
                 
                 if ($completion_result) {
                     $synced_count++;
-                    $this->log('✅ Marked ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'success');
                     
                     // Clear progress cache for this object
                     $this->clear_progress_cache($user_id, $translated_object_id, $object_type);
                 } else {
-                    $this->log('❌ Failed to mark ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ') as complete for user ' . $user_id, 'error');
                 }
             }
             
             if ($synced_count > 0) {
-                $this->log('✅ Successfully synced ' . $object_type . ' progress to ' . $synced_count . ' translations', 'success');
                 
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_object_progress_synced', $user_id, $object_id, $object_type, $translations, $synced_count);
             } else {
-                $this->log('No new ' . $object_type . ' progress sync needed', 'info');
             }
             
         } catch (Exception $e) {
-            $this->log('Error during ' . $object_type . ' progress sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -575,18 +523,15 @@ class WPML_LLMS_Progress_Sync {
         // Handle all supported object types
         $supported_types = array('lesson', 'section', 'course', 'llms_quiz');
         if (!in_array($object_type, $supported_types)) {
-            $this->log('Object type ' . $object_type . ' not supported for incompletion sync', 'info');
             return;
         }
         
-        $this->log('Starting object incompletion sync for user ' . $user_id . ' in ' . $object_type . ' ' . $object_id, 'info');
         
         try {
             // Get all translations of this object
             $translations = $this->get_object_translations($object_id, $object_type);
             
             if (empty($translations)) {
-                $this->log('No translations found for ' . $object_type . ' ' . $object_id, 'info');
                 return;
             }
             
@@ -602,7 +547,6 @@ class WPML_LLMS_Progress_Sync {
                 
                 // Check if object is already incomplete in this translation
                 if (!llms_is_complete($user_id, $translated_object_id, $object_type)) {
-                    $this->log('User ' . $user_id . ' already has incomplete ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ')', 'info');
                     continue;
                 }
                 
@@ -611,26 +555,21 @@ class WPML_LLMS_Progress_Sync {
                 
                 if ($incompletion_result) {
                     $synced_count++;
-                    $this->log('✅ Marked ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ') as incomplete for user ' . $user_id, 'success');
                     
                     // Clear progress cache for this object
                     $this->clear_progress_cache($user_id, $translated_object_id, $object_type);
                 } else {
-                    $this->log('❌ Failed to mark ' . $object_type . ' ' . $translated_object_id . ' (' . $lang_code . ') as incomplete for user ' . $user_id, 'error');
                 }
             }
             
             if ($synced_count > 0) {
-                $this->log('✅ Successfully synced ' . $object_type . ' incompletion to ' . $synced_count . ' translations', 'success');
                 
                 // Fire custom action for other plugins to hook into
                 do_action('wpml_llms_object_incompletion_synced', $user_id, $object_id, $object_type, $translations, $synced_count);
             } else {
-                $this->log('No new ' . $object_type . ' incompletion sync needed', 'info');
             }
             
         } catch (Exception $e) {
-            $this->log('Error during ' . $object_type . ' incompletion sync: ' . $e->getMessage(), 'error');
         }
     }
     
@@ -693,12 +632,7 @@ class WPML_LLMS_Progress_Sync {
      * @param string $message Log message
      * @param string $level Log level (info, success, error)
      */
-    private function log($message, $level = 'info') {
-        // Use our main logging function
-        if (function_exists('wpml_llms_log')) {
-            wpml_llms_log('[Progress-Sync] ' . $message, $level);
-        }
-    }
+
     
     /**
      * Clear progress cache for a specific object and related objects
@@ -723,14 +657,12 @@ class WPML_LLMS_Progress_Sync {
                     $section_id = $lesson->get_parent_section();
                     if ($section_id) {
                         $student->set('section_' . $section_id . '_progress', '');
-                        $this->log('Cleared section progress cache for section ' . $section_id, 'info');
                     }
                     
                     // Clear course cache for the course containing this lesson
                     $course_id = $lesson->get_parent_course();
                     if ($course_id) {
                         $student->set('course_' . $course_id . '_progress', '');
-                        $this->log('Cleared course progress cache for course ' . $course_id, 'info');
                     }
                     break;
                     
@@ -743,7 +675,6 @@ class WPML_LLMS_Progress_Sync {
                     $course_id = $section->get_parent_course();
                     if ($course_id) {
                         $student->set('course_' . $course_id . '_progress', '');
-                        $this->log('Cleared course progress cache for course ' . $course_id, 'info');
                     }
                     break;
                     
@@ -764,7 +695,6 @@ class WPML_LLMS_Progress_Sync {
                         $course_id = $lesson->get_parent_course();
                         if ($course_id) {
                             $student->set('course_' . $course_id . '_progress', '');
-                            $this->log('Cleared course progress cache for course ' . $course_id . ' (via quiz)', 'info');
                         }
                     }
                     break;
@@ -773,10 +703,8 @@ class WPML_LLMS_Progress_Sync {
             // Force refresh of any cached progress data
             wp_cache_delete($user_id, 'llms_student_progress');
             
-            $this->log('✅ Cleared progress cache for ' . $object_type . ' ' . $object_id . ' (user ' . $user_id . ')', 'success');
             
         } catch (Exception $e) {
-            $this->log('Error clearing progress cache: ' . $e->getMessage(), 'error');
         }
     }
 
@@ -811,16 +739,13 @@ class WPML_LLMS_Progress_Sync {
                 if ($translated_course_id && $translated_course_id != $course_id) {
                     // Clear course progress cache for this translated course
                     $student->set('course_' . $translated_course_id . '_progress', '');
-                    $this->log('🔄 Cleared course progress cache for course ' . $translated_course_id . ' (' . $lang_code . ')', 'info');
                 }
             }
             
             // Also clear the original course cache
             $student->set('course_' . $course_id . '_progress', '');
-            $this->log('✅ Cleared course progress cache for all translated courses', 'success');
             
         } catch (Exception $e) {
-            $this->log('❌ Error clearing all course progress cache: ' . $e->getMessage(), 'error');
         }
     }
 
@@ -862,14 +787,12 @@ class WPML_LLMS_Progress_Sync {
                 if ($translated_lesson_id && $translated_lesson_id != $lesson_id) {
                     // Check if this translated lesson is complete using direct database query
                     if ($this->is_lesson_complete_in_database($student->get_id(), $translated_lesson_id)) {
-                        $this->log('✅ Found lesson ' . $lesson_id . ' completed in translation ' . $translated_lesson_id . ' (' . $lang_code . ')', 'info');
                         return true; // Found completion in another language!
                     }
                 }
             }
             
         } catch (Exception $e) {
-            $this->log('❌ Error checking lesson completion across translations: ' . $e->getMessage(), 'error');
         }
         
         return $is_complete;

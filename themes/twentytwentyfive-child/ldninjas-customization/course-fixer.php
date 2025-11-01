@@ -15,7 +15,6 @@ if (!defined('ABSPATH')) {
 
 class WPML_LLMS_Course_Fixer {
     
-    private $logs = array();
     private $stats = array(
         'courses_processed' => 0,
         'relationships_fixed' => 0,
@@ -59,7 +58,6 @@ class WPML_LLMS_Course_Fixer {
      * Fix course relationships
      */
     public function fix_course_relationships($course_id) {
-        $this->log('Starting relationship fix for course ID: ' . $course_id, 'info');
         
         try {
             // Validate course exists
@@ -68,11 +66,9 @@ class WPML_LLMS_Course_Fixer {
                 throw new Exception('Invalid course ID: ' . $course_id);
             }
             
-            $this->log('Course found: ' . $course->post_title, 'success');
             
             // Get course translations
             $translations = $this->get_course_translations($course_id);
-            $this->log('Found ' . count($translations) . ' translations', 'info');
             
             // Fix WPML relationships
             $this->fix_wpml_relationships($course_id, $translations);
@@ -98,22 +94,18 @@ class WPML_LLMS_Course_Fixer {
             $this->stats['courses_processed']++;
             $this->stats['end_time'] = current_time('mysql');
             
-            $this->log('Course relationship fix completed successfully', 'success');
             
             return array(
                 'success' => true,
-                'logs' => $this->logs,
                 'stats' => $this->stats
             );
             
         } catch (Exception $e) {
             $this->stats['errors']++;
-            $this->log('Error: ' . $e->getMessage(), 'error');
             
             return array(
                 'success' => false,
                 'error' => $e->getMessage(),
-                'logs' => $this->logs,
                 'stats' => $this->stats
             );
         }
@@ -126,7 +118,6 @@ class WPML_LLMS_Course_Fixer {
         $translations = array();
         
         if (!function_exists('wpml_get_language_information')) {
-            $this->log('WPML functions not available', 'warning');
             return $translations;
         }
         
@@ -146,7 +137,6 @@ class WPML_LLMS_Course_Fixer {
                         'language_name' => $language['native_name']
                     );
                     
-                    $this->log('Found translation: ' . $translated_post->post_title . ' (' . $lang_code . ')', 'info');
                 }
             }
         }
@@ -158,7 +148,6 @@ class WPML_LLMS_Course_Fixer {
      * Fix WPML relationships
      */
     private function fix_wpml_relationships($course_id, $translations) {
-        $this->log('Fixing WPML relationships...', 'info');
         
         global $wpdb;
         
@@ -192,10 +181,8 @@ class WPML_LLMS_Course_Fixer {
                     );
                     
                     $this->stats['relationships_fixed']++;
-                    $this->log('Fixed WPML relationship for ' . $translation['title'], 'success');
                 }
             } else {
-                $this->log('WPML relationship already exists for ' . $translation['title'], 'info');
             }
         }
     }
@@ -204,10 +191,8 @@ class WPML_LLMS_Course_Fixer {
      * Sync course sections
      */
     private function sync_course_sections($course_id, $translations) {
-        $this->log('Syncing course sections...', 'info');
         
         if (!class_exists('LLMS_Course')) {
-            $this->log('LifterLMS not available', 'warning');
             return;
         }
         
@@ -215,12 +200,10 @@ class WPML_LLMS_Course_Fixer {
         $main_sections = $main_course->get_sections('ids');
         
         if (empty($main_sections)) {
-            $this->log('No sections found in main course', 'info');
             return;
         }
         
         foreach ($translations as $lang_code => $translation) {
-            $this->log('Processing sections for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
             
             // Sync section relationships
             foreach ($main_sections as $section_id) {
@@ -231,10 +214,8 @@ class WPML_LLMS_Course_Fixer {
                     $current_parent_course = get_post_meta($translated_section_id, '_llms_parent_course', true);
                     if ($current_parent_course != $translation['id']) {
                         update_post_meta($translated_section_id, '_llms_parent_course', $translation['id']);
-                        $this->log('Fixed section ' . $translated_section_id . ' parent course to ' . $translation['id'], 'success');
                         $this->stats['sections_synced']++;
                     } else {
-                        $this->log('Section ' . $translated_section_id . ' already has correct parent course', 'info');
                     }
                     
                     // Fix section order meta key (critical for LifterLMS to find sections)
@@ -243,19 +224,14 @@ class WPML_LLMS_Course_Fixer {
                         $current_section_order = get_post_meta($translated_section_id, '_llms_order', true);
                         if ($current_section_order != $main_section_order) {
                             update_post_meta($translated_section_id, '_llms_order', $main_section_order);
-                            $this->log('Fixed section ' . $translated_section_id . ' order meta to ' . $main_section_order, 'success');
                         } else {
-                            $this->log('Section ' . $translated_section_id . ' already has correct order meta', 'info');
                         }
                     } else {
-                        $this->log('Main section ' . $section_id . ' has no order meta', 'warning');
                     }
                 } else {
-                    $this->log('No translation found for section ' . $section_id . ' in ' . $lang_code, 'warning');
                 }
             }
             
-            $this->log('Completed section sync for ' . $translation['title'], 'success');
         }
     }
     
@@ -263,10 +239,8 @@ class WPML_LLMS_Course_Fixer {
      * Sync course lessons
      */
     private function sync_course_lessons($course_id, $translations) {
-        $this->log('Syncing course lessons...', 'info');
         
         if (!class_exists('LLMS_Course')) {
-            $this->log('LifterLMS not available', 'warning');
             return;
         }
         
@@ -274,12 +248,10 @@ class WPML_LLMS_Course_Fixer {
         $main_lessons = $main_course->get_lessons('ids');
         
         if (empty($main_lessons)) {
-            $this->log('No lessons found in main course', 'info');
             return;
         }
         
         foreach ($translations as $lang_code => $translation) {
-            $this->log('Processing lessons for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
             
             // Sync lesson relationships
             foreach ($main_lessons as $lesson_id) {
@@ -290,7 +262,6 @@ class WPML_LLMS_Course_Fixer {
                     $current_parent_course = get_post_meta($translated_lesson_id, '_llms_parent_course', true);
                     if ($current_parent_course != $translation['id']) {
                         update_post_meta($translated_lesson_id, '_llms_parent_course', $translation['id']);
-                        $this->log('Fixed lesson ' . $translated_lesson_id . ' parent course to ' . $translation['id'], 'success');
                     }
                     
                     // Fix lesson → section relationship
@@ -303,15 +274,11 @@ class WPML_LLMS_Course_Fixer {
                             $current_parent_section = get_post_meta($translated_lesson_id, '_llms_parent_section', true);
                             if ($current_parent_section != $translated_section_id) {
                                 update_post_meta($translated_lesson_id, '_llms_parent_section', $translated_section_id);
-                                $this->log('Fixed lesson ' . $translated_lesson_id . ' parent section to ' . $translated_section_id, 'success');
                             } else {
-                                $this->log('Lesson ' . $translated_lesson_id . ' already has correct parent section', 'info');
                             }
                         } else {
-                            $this->log('No translated section found for lesson ' . $translated_lesson_id, 'warning');
                         }
                     } else {
-                        $this->log('Main lesson ' . $lesson_id . ' has no parent section', 'info');
                     }
                     
                     // Fix lesson order meta key (critical for LifterLMS ordering)
@@ -320,21 +287,16 @@ class WPML_LLMS_Course_Fixer {
                         $current_lesson_order = get_post_meta($translated_lesson_id, '_llms_order', true);
                         if ($current_lesson_order != $main_lesson_order) {
                             update_post_meta($translated_lesson_id, '_llms_order', $main_lesson_order);
-                            $this->log('Fixed lesson ' . $translated_lesson_id . ' order meta to ' . $main_lesson_order, 'success');
                         } else {
-                            $this->log('Lesson ' . $translated_lesson_id . ' already has correct order meta', 'info');
                         }
                     } else {
-                        $this->log('Main lesson ' . $lesson_id . ' has no order meta', 'warning');
                     }
                     
                     $this->stats['lessons_synced']++;
                 } else {
-                    $this->log('No translation found for lesson ' . $lesson_id . ' in ' . $lang_code, 'warning');
                 }
             }
             
-            $this->log('Completed lesson sync for ' . $translation['title'], 'success');
         }
     }
     
@@ -342,10 +304,8 @@ class WPML_LLMS_Course_Fixer {
      * Sync course quizzes
      */
     private function sync_course_quizzes($course_id, $translations) {
-        $this->log('Syncing course quizzes...', 'info');
         
         if (!class_exists('LLMS_Course')) {
-            $this->log('LifterLMS not available', 'warning');
             return;
         }
         
@@ -353,12 +313,10 @@ class WPML_LLMS_Course_Fixer {
         $main_lessons = $main_course->get_lessons('lessons');
         
         if (empty($main_lessons)) {
-            $this->log('No lessons found in main course', 'info');
             return;
         }
         
         foreach ($translations as $lang_code => $translation) {
-            $this->log('Processing quizzes for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
             
             // Process each lesson to find and sync quizzes
             foreach ($main_lessons as $main_lesson) {
@@ -388,9 +346,7 @@ class WPML_LLMS_Course_Fixer {
                         $current_lesson_quiz = $translated_lesson->get('quiz');
                         if ($current_lesson_quiz != $translated_quiz_id) {
                             $translated_lesson->set('quiz', $translated_quiz_id);
-                            $this->log('Fixed lesson ' . $translated_lesson_id . ' quiz reference to ' . $translated_quiz_id, 'success');
                         } else {
-                            $this->log('Lesson ' . $translated_lesson_id . ' already has correct quiz reference', 'info');
                         }
                     }
                     
@@ -400,9 +356,7 @@ class WPML_LLMS_Course_Fixer {
                         $current_quiz_lesson = $translated_quiz->get('lesson_id');
                         if ($current_quiz_lesson != $translated_lesson_id) {
                             $translated_quiz->set('lesson_id', $translated_lesson_id);
-                            $this->log('Fixed quiz ' . $translated_quiz_id . ' lesson reference to ' . $translated_lesson_id, 'success');
                         } else {
-                            $this->log('Quiz ' . $translated_quiz_id . ' already has correct lesson reference', 'info');
                         }
                     }
                     
@@ -410,15 +364,12 @@ class WPML_LLMS_Course_Fixer {
                     
                 } else {
                     if (!$translated_lesson_id) {
-                        $this->log('No translated lesson found for lesson ' . $main_lesson_id . ' in ' . $lang_code, 'warning');
                     }
                     if (!$translated_quiz_id) {
-                        $this->log('No translated quiz found for quiz ' . $main_quiz_id . ' in ' . $lang_code, 'warning');
                     }
                 }
             }
             
-            $this->log('Completed quiz sync for ' . $translation['title'], 'success');
         }
         
         // Now sync quiz-question relationships
@@ -430,10 +381,8 @@ class WPML_LLMS_Course_Fixer {
      * Based on LifterLMS structure where questions use _llms_parent_id to reference their parent quiz
      */
     private function sync_quiz_questions($course_id, $translations) {
-        $this->log('Syncing quiz-question relationships...', 'info');
         
         if (!class_exists('LLMS_Course')) {
-            $this->log('LifterLMS not available', 'warning');
             return;
         }
         
@@ -449,10 +398,8 @@ class WPML_LLMS_Course_Fixer {
             'fields' => 'ids',
         ));
         
-        $this->log('Found ' . count($english_questions) . ' English questions to process', 'info');
         
         foreach ($translations as $lang_code => $translation) {
-            $this->log('Processing questions for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
             
             $questions_fixed = 0;
             
@@ -464,13 +411,11 @@ class WPML_LLMS_Course_Fixer {
                     continue; // Skip if no translation found or this is the original
                 }
                 
-                $this->log('Found translated question: ' . $orig_question_id . ' => ' . $translated_question_id, 'info');
                 
                 // Get the original parent quiz ID from the original question
                 $orig_quiz_id = get_post_meta($orig_question_id, '_llms_parent_id', true);
                 
                 if (!$orig_quiz_id) {
-                    $this->log('No parent quiz found for original question ' . $orig_question_id, 'warning');
                     continue;
                 }
                 
@@ -478,18 +423,15 @@ class WPML_LLMS_Course_Fixer {
                 $translated_quiz_id = apply_filters('wpml_object_id', $orig_quiz_id, 'llms_quiz', false, $lang_code);
                 
                 if (!$translated_quiz_id || !get_post($translated_quiz_id)) {
-                    $this->log('No translated quiz found for quiz ' . $orig_quiz_id . ' in ' . $lang_code, 'warning');
                     continue;
                 }
                 
                 // Update the question's parent quiz reference
                 $current_parent = get_post_meta($translated_question_id, '_llms_parent_id', true);
                 
-                $this->log('Question ' . $translated_question_id . ': current parent = ' . $current_parent . ', should be = ' . $translated_quiz_id, 'info');
                 
                 if ($current_parent != $translated_quiz_id) {
                     update_post_meta($translated_question_id, '_llms_parent_id', $translated_quiz_id);
-                    $this->log('Fixed question ' . $translated_question_id . ': _llms_parent_id => ' . $translated_quiz_id, 'success');
                     $questions_fixed++;
                     
                     // Sync question choices and meta
@@ -498,7 +440,6 @@ class WPML_LLMS_Course_Fixer {
                     // Also sync the parent quiz meta if needed
                     $this->sync_quiz_meta($orig_quiz_id, $translated_quiz_id);
                 } else {
-                    $this->log('Question ' . $translated_question_id . ' already has correct parent quiz', 'info');
                     
                     // Still sync choices even if parent is correct
                     $this->sync_question_choices($orig_question_id, $translated_question_id);
@@ -506,14 +447,11 @@ class WPML_LLMS_Course_Fixer {
             }
             
             if ($questions_fixed > 0) {
-                $this->log('Fixed ' . $questions_fixed . ' questions for ' . $translation['title'], 'success');
                 $this->stats['questions_synced'] += $questions_fixed;
             } else {
-                $this->log('No questions needed fixing for ' . $translation['title'], 'info');
             }
         }
         
-        $this->log('Quiz-question relationship sync completed', 'success');
         
         // Verify quiz-question relationships after sync
         $this->verify_quiz_questions($course_id, $translations);
@@ -526,7 +464,6 @@ class WPML_LLMS_Course_Fixer {
     private function sync_question_choices($orig_question_id, $translated_question_id) {
         global $wpdb;
         
-        $this->log('Syncing choices from question ' . $orig_question_id . ' to ' . $translated_question_id, 'info');
         
         // Get ALL meta keys from original question that start with _llms_choice_
         $choice_meta_keys = $wpdb->get_results($wpdb->prepare("
@@ -538,7 +475,6 @@ class WPML_LLMS_Course_Fixer {
                                 '_llms_description_enabled', '_llms_video_enabled', '_llms_video_src'))
         ", $orig_question_id));
         
-        $this->log('Found ' . count($choice_meta_keys) . ' meta keys to sync from original question', 'info');
         
         $synced_choices = 0;
         
@@ -546,11 +482,9 @@ class WPML_LLMS_Course_Fixer {
             $current_value = get_post_meta($translated_question_id, $meta->meta_key, true);
             
             // Log what we're comparing
-            $this->log('Checking ' . $meta->meta_key . ': current="' . $current_value . '", original="' . $meta->meta_value . '"', 'info');
             
             // Skip if values are the same
             if ($current_value === $meta->meta_value) {
-                $this->log('Values match, skipping ' . $meta->meta_key, 'info');
                 continue;
             }
             
@@ -562,7 +496,6 @@ class WPML_LLMS_Course_Fixer {
                 $unserialized_value = maybe_unserialize($meta->meta_value);
                 if ($unserialized_value !== false) {
                     $value_to_store = $unserialized_value;
-                    $this->log('Unserializing ' . $meta->meta_key . ' before storing', 'info');
                 }
             }
             
@@ -570,13 +503,10 @@ class WPML_LLMS_Course_Fixer {
             update_post_meta($translated_question_id, $meta->meta_key, $value_to_store);
             $synced_choices++;
             
-            $this->log('✅ Synced ' . $meta->meta_key . ' for question ' . $translated_question_id, 'success');
         }
         
         if ($synced_choices > 0) {
-            $this->log('✅ Synced ' . $synced_choices . ' choice/meta fields for question ' . $translated_question_id, 'success');
         } else {
-            $this->log('⚠️ No choice fields needed syncing for question ' . $translated_question_id, 'warning');
         }
     }
     
@@ -614,7 +544,6 @@ class WPML_LLMS_Course_Fixer {
                 $unserialized_value = maybe_unserialize($meta->meta_value);
                 if ($unserialized_value !== false) {
                     $value_to_store = $unserialized_value;
-                    $this->log('Unserializing quiz setting ' . $meta->meta_key . ' before storing', 'info');
                 }
             }
             
@@ -622,11 +551,9 @@ class WPML_LLMS_Course_Fixer {
             update_post_meta($translated_quiz_id, $meta->meta_key, $value_to_store);
             $synced_settings++;
             
-            $this->log('Synced quiz setting ' . $meta->meta_key . ' for quiz ' . $translated_quiz_id, 'info');
         }
         
         if ($synced_settings > 0) {
-            $this->log('Synced ' . $synced_settings . ' quiz settings for quiz ' . $translated_quiz_id, 'success');
             $this->stats['quiz_settings_synced'] += $synced_settings;
         }
     }
@@ -636,7 +563,6 @@ class WPML_LLMS_Course_Fixer {
      * Access plans are linked to courses via _llms_product_id meta key
      */
     private function sync_access_plans($course_id, $translations) {
-        $this->log('Syncing access plans...', 'info');
         
         $default_lang = apply_filters('wpml_default_language', null) ?: 'en';
         
@@ -652,10 +578,8 @@ class WPML_LLMS_Course_Fixer {
             'fields' => 'ids',
         ));
         
-        $this->log('Found ' . count($original_access_plans) . ' access plans for original course', 'info');
         
         foreach ($translations as $lang_code => $translation) {
-            $this->log('Processing access plans for ' . $translation['title'] . ' (' . $lang_code . ')', 'info');
             
             $plans_synced = 0;
             
@@ -664,45 +588,35 @@ class WPML_LLMS_Course_Fixer {
                 $translated_plan_id = apply_filters('wpml_object_id', $original_plan_id, 'llms_access_plan', false, $lang_code);
                 
                 if (!$translated_plan_id || $translated_plan_id == $original_plan_id) {
-                    $this->log('No translated access plan found for plan ' . $original_plan_id . ' in ' . $lang_code, 'warning');
                     continue;
                 }
                 
-                $this->log('Found translated access plan: ' . $original_plan_id . ' => ' . $translated_plan_id, 'info');
                 
                 // Update the access plan's product reference
                 $current_product_id = get_post_meta($translated_plan_id, '_llms_product_id', true);
                 
-                $this->log('Access plan ' . $translated_plan_id . ': current product = ' . $current_product_id . ', should be = ' . $translation['id'], 'info');
                 
                 if ($current_product_id != $translation['id']) {
                     update_post_meta($translated_plan_id, '_llms_product_id', $translation['id']);
-                    $this->log('✅ Fixed access plan ' . $translated_plan_id . ': _llms_product_id => ' . $translation['id'], 'success');
                     $plans_synced++;
                     $this->stats['access_plans_synced']++;
                 } else {
-                    $this->log('Access plan ' . $translated_plan_id . ' already has correct product reference', 'info');
                 }
             }
             
             if ($plans_synced > 0) {
-                $this->log('✅ Synced ' . $plans_synced . ' access plans for ' . $translation['title'], 'success');
             } else {
-                $this->log('No access plans needed syncing for ' . $translation['title'], 'info');
             }
         }
         
-        $this->log('Access plan sync completed', 'success');
     }
     
     /**
      * Verify that translated quizzes can find their questions after sync
      */
     private function verify_quiz_questions($course_id, $translations) {
-        $this->log('Verifying quiz-question relationships...', 'info');
         
         if (!class_exists('LLMS_Course') || !class_exists('LLMS_Quiz')) {
-            $this->log('LifterLMS classes not available for verification', 'warning');
             return;
         }
         
@@ -735,30 +649,24 @@ class WPML_LLMS_Course_Fixer {
                 $questions = $quiz->get_questions('ids');
                 
                 if (empty($questions)) {
-                    $this->log('WARNING: Quiz ' . $quiz_id . ' (' . $lang_code . ') still has no questions!', 'error');
                     $broken_quizzes++;
                 } else {
-                    $this->log('Verified: Quiz ' . $quiz_id . ' (' . $lang_code . ') has ' . count($questions) . ' questions', 'success');
                     $working_quizzes++;
                 }
             }
             
             if ($quiz_verification_count > 0) {
-                $this->log('Verification for ' . $translation['title'] . ': ' . $working_quizzes . ' working, ' . $broken_quizzes . ' broken quizzes', 'info');
             }
         }
         
-        $this->log('Quiz-question verification completed', 'success');
     }
     
     /**
      * Sync course enrollments
      */
     private function sync_course_enrollments($course_id, $translations) {
-        $this->log('Syncing course enrollments...', 'info');
         
         if (!class_exists('LLMS_Student')) {
-            $this->log('LifterLMS Student class not available', 'warning');
             return;
         }
         
@@ -767,7 +675,6 @@ class WPML_LLMS_Course_Fixer {
         $enrolled_students = $main_course->get_students();
         
         if (empty($enrolled_students)) {
-            $this->log('No enrolled students found', 'info');
             return;
         }
         
@@ -781,7 +688,6 @@ class WPML_LLMS_Course_Fixer {
                     $student->enroll($translation['id']);
                     $this->stats['enrollments_synced']++;
                     
-                    $this->log('Enrolled student ' . $student_id . ' in ' . $translation['title'], 'success');
                 }
             }
         }
@@ -791,7 +697,6 @@ class WPML_LLMS_Course_Fixer {
      * Sync course metadata
      */
     private function sync_course_metadata($course_id, $translations) {
-        $this->log('Syncing course metadata...', 'info');
         
         // Define metadata fields that should be synced
         $sync_fields = array(
@@ -814,25 +719,10 @@ class WPML_LLMS_Course_Fixer {
                 }
             }
             
-            $this->log('Synced metadata for ' . $translation['title'], 'success');
         }
     }
     
-    /**
-     * Log a message
-     */
-    private function log($message, $type = 'info') {
-        $timestamp = current_time('H:i:s');
-        
-        $this->logs[] = array(
-            'timestamp' => $timestamp,
-            'message' => $message,
-            'type' => $type
-        );
-        
-        // Also log to WordPress debug log if enabled
-        wpml_llms_log($message, $type);
-    }
+
     
     /**
      * Get processing statistics
@@ -841,18 +731,12 @@ class WPML_LLMS_Course_Fixer {
         return $this->stats;
     }
     
-    /**
-     * Get processing logs
-     */
-    public function get_logs() {
-        return $this->logs;
-    }
+
     
     /**
-     * Clear logs and stats
+     * Clear stats
      */
     public function reset() {
-        $this->logs = array();
         $this->init_stats();
     }
 }
