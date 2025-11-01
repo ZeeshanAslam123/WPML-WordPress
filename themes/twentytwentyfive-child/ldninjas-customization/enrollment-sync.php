@@ -258,14 +258,14 @@ class WPML_LLMS_Enrollment_Sync {
      * @param string $level Log level (info, success, warning, error)
      */
     private function log($message, $level = 'info') {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            $log_message = '[WPML-LLMS-Enrollment-Sync] ' . $message;
-            error_log($log_message);
-        }
-        
-        // Also log to LifterLMS logs if available
+        // Log to LifterLMS logs if available
         if (function_exists('llms_log')) {
             llms_log($message, 'wpml-enrollment-sync');
+        }
+        
+        // Use our main logging function
+        if (function_exists('wpml_llms_log')) {
+            wpml_llms_log('[Enrollment-Sync] ' . $message, $level);
         }
     }
 }

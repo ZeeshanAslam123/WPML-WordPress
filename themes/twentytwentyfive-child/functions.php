@@ -86,52 +86,15 @@ function wpml_llms_enqueue_admin_assets($hook) {
 add_action('admin_enqueue_scripts', 'wpml_llms_enqueue_admin_assets');
 
 /**
- * Add theme support and customizations
- */
-function twentytwentyfive_child_theme_setup() {
-    // Add theme support for features if needed
-    // This function can be extended for additional theme customizations
-}
-add_action('after_setup_theme', 'twentytwentyfive_child_theme_setup');
-
-/**
  * Utility function to log messages
  */
 function wpml_llms_log($message, $type = 'info') {
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('[WPML-LLMS] ' . strtoupper($type) . ': ' . $message);
-    }
-}
-
-/**
- * Get English courses for the course selector
- */
-function wpml_llms_get_english_courses() {
-    $courses = array();
-    
-    if (class_exists('LLMS_Course')) {
-        $args = array(
-            'post_type' => 'course',
-            'post_status' => 'publish',
-            'posts_per_page' => -1,
-            'meta_query' => array(
-                array(
-                    'key' => 'wpml_language',
-                    'value' => 'en',
-                    'compare' => '='
-                )
-            )
-        );
-        
-        $course_posts = get_posts($args);
-        
-        foreach ($course_posts as $course_post) {
-            $courses[] = array(
-                'id' => $course_post->ID,
-                'title' => $course_post->post_title
-            );
+    // Log to WordPress debug log if enabled
+    if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+        $log_message = '[WPML-LLMS] ' . strtoupper($type) . ': ' . $message;
+        if (function_exists('wp_debug_backtrace_summary')) {
+            // Use WordPress logging if available
+            wp_debug_backtrace_summary($log_message);
         }
     }
-    
-    return $courses;
 }
