@@ -43,6 +43,7 @@ add_action('wp_enqueue_scripts', 'twentytwentyfive_child_enqueue_styles');
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/admin-menu.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/ajax-handlers.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/course-fixer.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/auto-course-fixer.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/enrollment-sync.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/progress-sync.php';
 
