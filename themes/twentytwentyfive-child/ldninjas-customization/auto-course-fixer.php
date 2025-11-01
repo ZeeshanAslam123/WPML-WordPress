@@ -168,42 +168,62 @@ class WPML_LLMS_Auto_Course_Fixer {
      * @param string $post_type The post type that was translated
      */
     private function handle_course_related_translation($translated_post_id, $post_type) {
+        $this->log('Handling course-related translation for ' . $post_type . ' ID: ' . $translated_post_id, 'info');
+        
         $course_id = null;
+        
+        // First, try to find the English version of this post
+        $english_post_id = apply_filters('wpml_object_id', $translated_post_id, $post_type, false, 'en');
+        
+        if (!$english_post_id || $english_post_id === $translated_post_id) {
+            $this->log('Could not find English version of ' . $post_type . ' ' . $translated_post_id, 'warning');
+            return;
+        }
+        
+        $this->log('Found English ' . $post_type . ' ID: ' . $english_post_id, 'info');
         
         switch ($post_type) {
             case 'course':
-                $course_id = $translated_post_id;
+                $course_id = $english_post_id;
                 break;
                 
             case 'section':
-                // Get the parent course for this section
-                $parent_course = get_post_meta($translated_post_id, '_llms_parent_course', true);
+                // Get the parent course from the English section
+                $parent_course = get_post_meta($english_post_id, '_llms_parent_course', true);
                 if ($parent_course) {
-                    // Get the English version of the parent course
-                    $course_id = apply_filters('wpml_object_id', $parent_course, 'course', false, 'en');
+                    $course_id = $parent_course;
+                    $this->log('Found parent course ' . $course_id . ' for English section ' . $english_post_id, 'info');
+                } else {
+                    $this->log('English section ' . $english_post_id . ' has no parent course', 'warning');
                 }
                 break;
                 
             case 'lesson':
-                // Get the parent section, then the parent course
-                $parent_section = get_post_meta($translated_post_id, '_llms_parent_section', true);
+                // Get the parent section and course from the English lesson
+                $parent_section = get_post_meta($english_post_id, '_llms_parent_section', true);
                 if ($parent_section) {
                     $parent_course = get_post_meta($parent_section, '_llms_parent_course', true);
                     if ($parent_course) {
-                        $course_id = apply_filters('wpml_object_id', $parent_course, 'course', false, 'en');
+                        $course_id = $parent_course;
+                        $this->log('Found parent course ' . $course_id . ' for English lesson ' . $english_post_id . ' via section ' . $parent_section, 'info');
+                    } else {
+                        $this->log('English lesson ' . $english_post_id . ' parent section ' . $parent_section . ' has no parent course', 'warning');
                     }
+                } else {
+                    $this->log('English lesson ' . $english_post_id . ' has no parent section', 'warning');
                 }
                 break;
                 
             case 'llms_quiz':
-                // Get the parent lesson, then section, then course
-                $parent_lesson = get_post_meta($translated_post_id, '_llms_parent_lesson', true);
+                // Get the parent lesson, then section, then course from English quiz
+                $parent_lesson = get_post_meta($english_post_id, '_llms_parent_lesson', true);
                 if ($parent_lesson) {
                     $parent_section = get_post_meta($parent_lesson, '_llms_parent_section', true);
                     if ($parent_section) {
                         $parent_course = get_post_meta($parent_section, '_llms_parent_course', true);
                         if ($parent_course) {
-                            $course_id = apply_filters('wpml_object_id', $parent_course, 'course', false, 'en');
+                            $course_id = $parent_course;
+                            $this->log('Found parent course ' . $course_id . ' for English quiz ' . $english_post_id . ' via lesson ' . $parent_lesson . ' and section ' . $parent_section, 'info');
                         }
                     }
                 }
@@ -211,11 +231,91 @@ class WPML_LLMS_Auto_Course_Fixer {
         }
         
         if ($course_id) {
-            $this->log('Found related English course ID: ' . $course_id . ' for ' . $post_type . ' ' . $translated_post_id, 'info');
-            // Use the translated post to find the course, but fix relationships for the English course
-            $this->execute_relationship_fix($translated_post_id, 'translation_completed_' . $post_type);
+            $this->log('Found related English course ID: ' . $course_id . ' for ' . $post_type . ' ' . $translated_post_id, 'success');
+            // Execute the relationship fix for the English course
+            $this->execute_relationship_fix($course_id, 'translation_completed_' . $post_type);
         } else {
-            $this->log('Could not find related English course for ' . $post_type . ' ' . $translated_post_id, 'warning');
+            $this->log('Could not find related English course for ' . $post_type . ' ' . $translated_post_id, 'error');
+            
+            // As a fallback, try to fix this specific post's relationships directly
+            $this->fix_individual_post_relationships($translated_post_id, $post_type);
+        }
+    }
+    
+    /**
+     * Fix individual post relationships as a fallback
+     * 
+     * @param int $translated_post_id The translated post ID
+     * @param string $post_type The post type
+     */
+    private function fix_individual_post_relationships($translated_post_id, $post_type) {
+        $this->log('Attempting individual relationship fix for ' . $post_type . ' ' . $translated_post_id, 'info');
+        
+        // Get the English version
+        $english_post_id = apply_filters('wpml_object_id', $translated_post_id, $post_type, false, 'en');
+        if (!$english_post_id || $english_post_id === $translated_post_id) {
+            $this->log('Cannot fix individual relationships - no English version found', 'error');
+            return;
+        }
+        
+        switch ($post_type) {
+            case 'lesson':
+                // Fix lesson relationships directly
+                $english_parent_course = get_post_meta($english_post_id, '_llms_parent_course', true);
+                $english_parent_section = get_post_meta($english_post_id, '_llms_parent_section', true);
+                
+                if ($english_parent_course) {
+                    // Find translated course
+                    $language = $this->get_post_language($translated_post_id);
+                    $translated_course_id = apply_filters('wpml_object_id', $english_parent_course, 'course', false, $language);
+                    
+                    if ($translated_course_id && $translated_course_id !== $english_parent_course) {
+                        update_post_meta($translated_post_id, '_llms_parent_course', $translated_course_id);
+                        $this->log('Fixed lesson parent course: ' . $translated_course_id, 'success');
+                    }
+                }
+                
+                if ($english_parent_section) {
+                    // Find translated section
+                    $language = $this->get_post_language($translated_post_id);
+                    $translated_section_id = apply_filters('wpml_object_id', $english_parent_section, 'section', false, $language);
+                    
+                    if ($translated_section_id && $translated_section_id !== $english_parent_section) {
+                        update_post_meta($translated_post_id, '_llms_parent_section', $translated_section_id);
+                        $this->log('Fixed lesson parent section: ' . $translated_section_id, 'success');
+                    }
+                }
+                break;
+                
+            case 'section':
+                // Fix section relationships directly
+                $english_parent_course = get_post_meta($english_post_id, '_llms_parent_course', true);
+                
+                if ($english_parent_course) {
+                    $language = $this->get_post_language($translated_post_id);
+                    $translated_course_id = apply_filters('wpml_object_id', $english_parent_course, 'course', false, $language);
+                    
+                    if ($translated_course_id && $translated_course_id !== $english_parent_course) {
+                        update_post_meta($translated_post_id, '_llms_parent_course', $translated_course_id);
+                        $this->log('Fixed section parent course: ' . $translated_course_id, 'success');
+                    }
+                }
+                break;
+                
+            case 'llms_quiz':
+                // Fix quiz relationships directly
+                $english_parent_lesson = get_post_meta($english_post_id, '_llms_parent_lesson', true);
+                
+                if ($english_parent_lesson) {
+                    $language = $this->get_post_language($translated_post_id);
+                    $translated_lesson_id = apply_filters('wpml_object_id', $english_parent_lesson, 'lesson', false, $language);
+                    
+                    if ($translated_lesson_id && $translated_lesson_id !== $english_parent_lesson) {
+                        update_post_meta($translated_post_id, '_llms_parent_lesson', $translated_lesson_id);
+                        $this->log('Fixed quiz parent lesson: ' . $translated_lesson_id, 'success');
+                    }
+                }
+                break;
         }
     }
     
@@ -329,10 +429,17 @@ class WPML_LLMS_Auto_Course_Fixer {
      * @return string|null Language code or null
      */
     private function get_post_language($post_id) {
+        // Get the post type to construct the correct element type
+        $post = get_post($post_id);
+        if (!$post) {
+            return null;
+        }
+        
         // Method 1: Use WPML filter (preferred)
+        $element_type = 'post_' . $post->post_type;
         $language = apply_filters('wpml_element_language_code', null, array(
             'element_id' => $post_id,
-            'element_type' => 'post_course'
+            'element_type' => $element_type
         ));
         
         if ($language) {
@@ -343,6 +450,12 @@ class WPML_LLMS_Auto_Course_Fixer {
         if (function_exists('wpml_get_language_information')) {
             $lang_info = wpml_get_language_information(null, $post_id);
             return isset($lang_info['language_code']) ? $lang_info['language_code'] : null;
+        }
+        
+        // Method 3: Check post meta (some WPML setups store it here)
+        $lang_meta = get_post_meta($post_id, 'wpml_language', true);
+        if ($lang_meta) {
+            return $lang_meta;
         }
         
         return null;
