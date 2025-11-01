@@ -694,10 +694,9 @@ class WPML_LLMS_Progress_Sync {
      * @param string $level Log level (info, success, error)
      */
     private function log($message, $level = 'info') {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            $timestamp = current_time('Y-m-d H:i:s');
-            $log_message = "[{$timestamp}] WPML-LLMS Progress Sync ({$level}): {$message}";
-            error_log($log_message);
+        // Use our main logging function
+        if (function_exists('wpml_llms_log')) {
+            wpml_llms_log('[Progress-Sync] ' . $message, $level);
         }
     }
     

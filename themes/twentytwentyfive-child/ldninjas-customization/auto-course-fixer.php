@@ -48,20 +48,18 @@ class WPML_LLMS_Auto_Course_Fixer {
      * Initialize hooks
      */
     private function init_hooks() {
-        // Primary hook - WPML translation completion (most targeted)
-        add_action('wpml_pro_translation_completed', array($this, 'on_translation_completed'), 10, 3);
+        // Primary hook - save_post is the most reliable for catching all saves
+        add_action('save_post', array($this, 'on_post_saved'), 20, 3);
         
-        // Additional WPML hooks for different translation methods
+        // WPML specific hooks as backup
+        add_action('wpml_pro_translation_completed', array($this, 'on_translation_completed'), 10, 3);
         add_action('icl_make_duplicate', array($this, 'on_wpml_duplicate'), 10, 4);
         
-        // More reliable hooks - save_post for all course-related content
-        add_action('save_post', array($this, 'on_post_saved'), 25, 3);
+        // Hook into WPML translation status changes
+        add_action('wpml_tm_translation_status_changed', array($this, 'on_translation_status_changed'), 10, 3);
         
         // Clean up processed courses cache periodically
         add_action('wp_scheduled_delete', array($this, 'cleanup_cache'));
-        
-        // Test hook to verify our system is working
-        add_action('init', array($this, 'test_hook_firing'));
     }
     
     /**
@@ -118,6 +116,26 @@ class WPML_LLMS_Auto_Course_Fixer {
     }
     
     /**
+     * Handle WPML translation status changes
+     * 
+     * @param int $translation_id Translation ID
+     * @param string $status New status
+     * @param int $translator_id Translator ID
+     */
+    public function on_translation_status_changed($translation_id, $status, $translator_id) {
+        // Only process when translation is completed
+        if ($status !== 'complete') {
+            return;
+        }
+        
+        $this->log('WPML translation status changed to complete for translation ID: ' . $translation_id, 'info');
+        
+        // This hook doesn't give us the post ID directly, so we need to find it
+        // This is a backup hook, so we'll just log it for now
+        $this->log('Translation completed via status change hook - post will be caught by save_post hook', 'info');
+    }
+    
+    /**
      * Handle any post save events - comprehensive handler for all course-related content
      * 
      * @param int $post_id Post ID
@@ -154,12 +172,7 @@ class WPML_LLMS_Auto_Course_Fixer {
         }
     }
     
-    /**
-     * Test hook to verify our system is working
-     */
-    public function test_hook_firing() {
-        $this->log('Auto-fixer test hook fired on init - system is working!', 'info');
-    }
+
     
     /**
      * Handle translation completion for course-related content
@@ -487,8 +500,6 @@ class WPML_LLMS_Auto_Course_Fixer {
         // Use the existing logging function if available
         if (function_exists('wpml_llms_log')) {
             wpml_llms_log('[AUTO-FIXER] ' . $message, $type);
-        } elseif (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[WPML-LLMS-AUTO] ' . strtoupper($type) . ': ' . $message);
         }
     }
     
@@ -539,13 +550,7 @@ class WPML_LLMS_Auto_Course_Fixer {
     }
 }
 
-// Initialize the auto-fixer (singleton pattern)
-WPML_LLMS_Auto_Course_Fixer::get_instance();
-
-// Debug: Write to a custom log file to verify our code is running
-if (function_exists('error_log')) {
-    error_log('[WPML-AUTO-FIXER] Auto-fixer file loaded and initialized at ' . date('Y-m-d H:i:s'), 3, get_stylesheet_directory() . '/auto-fixer-debug.log');
-}
+// Auto-fixer class loaded - initialization handled by functions.php
 
 /**
  * Helper function to get auto-fixer instance

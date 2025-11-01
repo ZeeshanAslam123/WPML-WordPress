@@ -47,6 +47,13 @@ require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/auto-course-f
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/enrollment-sync.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/progress-sync.php';
 
+// Initialize the auto course fixer
+add_action('init', function() {
+    if (class_exists('WPML_LLMS_Auto_Course_Fixer')) {
+        WPML_LLMS_Auto_Course_Fixer::get_instance();
+    }
+});
+
 /**
  * Enqueue admin assets
  */
@@ -98,8 +105,13 @@ add_action('after_setup_theme', 'twentytwentyfive_child_theme_setup');
  * Utility function to log messages
  */
 function wpml_llms_log($message, $type = 'info') {
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('[WPML-LLMS] ' . strtoupper($type) . ': ' . $message);
+    // Log to WordPress debug log if enabled
+    if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+        $log_message = '[WPML-LLMS] ' . strtoupper($type) . ': ' . $message;
+        if (function_exists('wp_debug_backtrace_summary')) {
+            // Use WordPress logging if available
+            wp_debug_backtrace_summary($log_message);
+        }
     }
 }
 
