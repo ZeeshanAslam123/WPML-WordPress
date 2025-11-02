@@ -24,6 +24,7 @@ class WPML_LLMS_Course_Fixer {
         'questions_synced' => 0,
         'quiz_settings_synced' => 0,
         'access_plans_synced' => 0,
+        'course_settings_synced' => 0,
         'errors' => 0
     );
     
@@ -32,6 +33,11 @@ class WPML_LLMS_Course_Fixer {
      */
     public function __construct() {
         $this->init_stats();
+        
+        // Hook into course save to automatically sync settings
+        add_action('save_post', array($this, 'auto_sync_course_settings'), 20, 3);
+        add_action('updated_post_meta', array($this, 'auto_sync_on_meta_update'), 10, 4);
+        add_action('post_updated', array($this, 'auto_sync_on_post_update'), 10, 3);
     }
     
     /**
@@ -47,6 +53,7 @@ class WPML_LLMS_Course_Fixer {
             'questions_synced' => 0,
             'quiz_settings_synced' => 0,
             'access_plans_synced' => 0,
+            'course_settings_synced' => 0,
             'enrollments_synced' => 0,
             'errors' => 0,
             'start_time' => current_time('mysql'),
@@ -620,28 +627,121 @@ class WPML_LLMS_Course_Fixer {
      */
     private function sync_course_metadata($course_id, $translations) {
         
-        // Define metadata fields that should be synced
+        // Comprehensive list of LifterLMS course meta fields to sync
         $sync_fields = array(
-            '_llms_length',
-            '_llms_difficulty_id',
-            '_llms_track_id',
-            '_llms_course_image',
-            '_llms_course_video_embed',
-            '_llms_audio_embed',
-            '_llms_prerequisite',
-            '_llms_has_prerequisite'
+            // General Settings
+            '_llms_length',                          // Course Length
+            '_llms_post_course_difficulty',          // Course Difficulty Category
+            '_llms_video_embed',                     // Featured Video
+            '_llms_tile_featured_video',             // Display Featured Video on Course Tile
+            '_llms_audio_embed',                     // Featured Audio
+            
+            // Sales Page Settings
+            '_llms_sales_page_content_type',         // Sales Page Content Type
+            '_llms_sales_page_content_page_id',      // Sales Page Content Page ID
+            '_llms_sales_page_content_url',          // Sales Page Redirect URL
+            
+            // Restrictions Settings
+            '_llms_content_restricted_message',      // Content Restricted Message
+            '_llms_enrollment_period',               // Enable Enrollment Period
+            '_llms_enrollment_start_date',           // Enrollment Start Date
+            '_llms_enrollment_end_date',             // Enrollment End Date
+            '_llms_enrollment_opens_message',        // Enrollment Opens Message
+            '_llms_enrollment_closed_message',       // Enrollment Closed Message
+            '_llms_time_period',                     // Enable Course Time Period
+            '_llms_start_date',                      // Course Start Date
+            '_llms_end_date',                        // Course End Date
+            '_llms_course_opens_message',            // Course Opens Message
+            '_llms_course_closed_message',           // Course Closed Message
+            
+            // Prerequisites Settings
+            '_llms_has_prerequisite',                // Has Prerequisites
+            '_llms_prerequisite',                    // Prerequisite Course ID
+            '_llms_prerequisite_track',              // Prerequisite Track ID
+            
+            // Drip Settings
+            '_llms_drip_method',                     // Drip Method
+            '_llms_days_before_available',           // Days Before Available
+            '_llms_date_available',                  // Date Available
+            
+            // Catalog Settings
+            '_llms_catalog_visibility',              // Catalog Visibility
+            '_llms_featured',                        // Featured Course
+            
+            // Engagement Settings
+            '_llms_enable_capacity',                 // Enable Capacity
+            '_llms_capacity',                        // Course Capacity
+            '_llms_capacity_message',                // Capacity Reached Message
+            
+            // Legacy/Additional Fields
+            '_llms_difficulty_id',                   // Legacy Difficulty ID
+            '_llms_track_id',                        // Track ID
+            '_llms_course_image',                    // Course Image
+            '_llms_course_video_embed',              // Legacy Video Embed
+            
+            // Completion Settings
+            '_llms_enable_completion_tracking',      // Enable Completion Tracking
+            '_llms_completion_redirect',             // Completion Redirect
+            '_llms_completion_redirect_url',         // Completion Redirect URL
+            
+            // Certificate & Achievement Settings
+            '_llms_certificate',                     // Certificate Template
+            '_llms_certificate_title',               // Certificate Title
+            '_llms_achievement',                     // Achievement Template
+            '_llms_achievement_title',               // Achievement Title
+            
+            // Notification Settings
+            '_llms_enable_notifications',            // Enable Notifications
+            
+            // Custom Fields (if any)
+            '_llms_custom_excerpt',                  // Custom Excerpt
+            '_llms_points',                          // Points Awarded
+            
+            // Access Plan Related (if stored as course meta)
+            '_llms_access_plans',                    // Access Plans
+            
+            // Additional Course Options
+            '_llms_enable_reviews',                  // Enable Reviews
+            '_llms_reviews_enabled',                 // Reviews Enabled (alternative)
+            '_llms_enable_comments',                 // Enable Comments
         );
+        
+        // Add stats tracking
+        $settings_synced = 0;
         
         foreach ($translations as $lang_code => $translation) {
             foreach ($sync_fields as $field) {
                 $main_value = get_post_meta($course_id, $field, true);
+                $current_value = get_post_meta($translation['id'], $field, true);
                 
-                if (!empty($main_value)) {
-                    update_post_meta($translation['id'], $field, $main_value);
+                // Only update if values are different or if main value exists and current doesn't
+                if ($main_value !== $current_value && ($main_value !== '' || $current_value !== '')) {
+                    if ($main_value === '' || $main_value === false || $main_value === null) {
+                        // Delete the meta if main course doesn't have it
+                        delete_post_meta($translation['id'], $field);
+                    } else {
+                        // Update with main course value
+                        update_post_meta($translation['id'], $field, $main_value);
+                    }
+                    $settings_synced++;
                 }
             }
             
+            // Also sync post excerpt (used for sales page content)
+            $main_post = get_post($course_id);
+            $translated_post = get_post($translation['id']);
+            
+            if ($main_post && $translated_post && $main_post->post_excerpt !== $translated_post->post_excerpt) {
+                wp_update_post(array(
+                    'ID' => $translation['id'],
+                    'post_excerpt' => $main_post->post_excerpt
+                ));
+                $settings_synced++;
+            }
         }
+        
+        // Update stats
+        $this->stats['course_settings_synced'] = $settings_synced;
     }
 
     /**
@@ -656,6 +756,184 @@ class WPML_LLMS_Course_Fixer {
      */
     public function reset() {
         $this->init_stats();
+    }
+    
+    /**
+     * Automatically sync course settings when a course is saved
+     * 
+     * @param int $post_id Post ID
+     * @param WP_Post $post Post object
+     * @param bool $update Whether this is an existing post being updated
+     */
+    public function auto_sync_course_settings($post_id, $post, $update) {
+        // Only process courses
+        if ($post->post_type !== 'course') {
+            return;
+        }
+        
+        // Skip if this is an autosave, revision, or bulk edit
+        if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id) || (defined('DOING_BULK_EDIT') && DOING_BULK_EDIT)) {
+            return;
+        }
+        
+        // Skip if WPML functions are not available
+        if (!function_exists('wpml_get_language_information')) {
+            return;
+        }
+        
+        // Get the language of the current post
+        $post_language_info = wpml_get_language_information($post_id);
+        if (is_wp_error($post_language_info)) {
+            return;
+        }
+        
+        // Only sync if this is the English (source) course
+        $default_language = apply_filters('wpml_default_language', null);
+        if ($post_language_info['language_code'] !== $default_language) {
+            return;
+        }
+        
+        // Prevent infinite loops
+        if (defined('WPML_LLMS_SYNCING_SETTINGS')) {
+            return;
+        }
+        define('WPML_LLMS_SYNCING_SETTINGS', true);
+        
+        try {
+            // Get translations and sync settings
+            $translations = $this->get_course_translations($post_id);
+            if (!empty($translations)) {
+                $this->sync_course_metadata($post_id, $translations);
+            }
+        } catch (Exception $e) {
+            // Handle errors silently to prevent breaking the save process
+            error_log('WPML LLMS Course Settings Sync Error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Automatically sync course settings when course meta is updated
+     * 
+     * @param int $meta_id Meta ID
+     * @param int $post_id Post ID
+     * @param string $meta_key Meta key
+     * @param mixed $meta_value Meta value
+     */
+    public function auto_sync_on_meta_update($meta_id, $post_id, $meta_key, $meta_value) {
+        // Only process LifterLMS course meta fields
+        if (strpos($meta_key, '_llms_') !== 0) {
+            return;
+        }
+        
+        // Get the post to check if it's a course
+        $post = get_post($post_id);
+        if (!$post || $post->post_type !== 'course') {
+            return;
+        }
+        
+        // Skip if WPML functions are not available
+        if (!function_exists('wpml_get_language_information')) {
+            return;
+        }
+        
+        // Get the language of the current post
+        $post_language_info = wpml_get_language_information($post_id);
+        if (is_wp_error($post_language_info)) {
+            return;
+        }
+        
+        // Only sync if this is the English (source) course
+        $default_language = apply_filters('wpml_default_language', null);
+        if ($post_language_info['language_code'] !== $default_language) {
+            return;
+        }
+        
+        // Prevent infinite loops
+        if (defined('WPML_LLMS_SYNCING_META')) {
+            return;
+        }
+        define('WPML_LLMS_SYNCING_META', true);
+        
+        try {
+            // Get translations and sync this specific meta field
+            $translations = $this->get_course_translations($post_id);
+            if (!empty($translations)) {
+                foreach ($translations as $lang_code => $translation) {
+                    $current_value = get_post_meta($translation['id'], $meta_key, true);
+                    
+                    // Only update if values are different
+                    if ($meta_value !== $current_value) {
+                        if ($meta_value === '' || $meta_value === false || $meta_value === null) {
+                            delete_post_meta($translation['id'], $meta_key);
+                        } else {
+                            update_post_meta($translation['id'], $meta_key, $meta_value);
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            // Handle errors silently to prevent breaking the meta update process
+            error_log('WPML LLMS Course Meta Sync Error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Automatically sync course post data (like excerpt) when course is updated
+     * 
+     * @param int $post_id Post ID
+     * @param WP_Post $post_after Post object after update
+     * @param WP_Post $post_before Post object before update
+     */
+    public function auto_sync_on_post_update($post_id, $post_after, $post_before) {
+        // Only process courses
+        if ($post_after->post_type !== 'course') {
+            return;
+        }
+        
+        // Skip if WPML functions are not available
+        if (!function_exists('wpml_get_language_information')) {
+            return;
+        }
+        
+        // Get the language of the current post
+        $post_language_info = wpml_get_language_information($post_id);
+        if (is_wp_error($post_language_info)) {
+            return;
+        }
+        
+        // Only sync if this is the English (source) course
+        $default_language = apply_filters('wpml_default_language', null);
+        if ($post_language_info['language_code'] !== $default_language) {
+            return;
+        }
+        
+        // Check if excerpt changed (used for sales page content)
+        if ($post_after->post_excerpt !== $post_before->post_excerpt) {
+            // Prevent infinite loops
+            if (defined('WPML_LLMS_SYNCING_EXCERPT')) {
+                return;
+            }
+            define('WPML_LLMS_SYNCING_EXCERPT', true);
+            
+            try {
+                // Get translations and sync excerpt
+                $translations = $this->get_course_translations($post_id);
+                if (!empty($translations)) {
+                    foreach ($translations as $lang_code => $translation) {
+                        $translated_post = get_post($translation['id']);
+                        if ($translated_post && $translated_post->post_excerpt !== $post_after->post_excerpt) {
+                            wp_update_post(array(
+                                'ID' => $translation['id'],
+                                'post_excerpt' => $post_after->post_excerpt
+                            ));
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                // Handle errors silently
+                error_log('WPML LLMS Course Excerpt Sync Error: ' . $e->getMessage());
+            }
+        }
     }
 }
 
