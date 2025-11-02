@@ -695,10 +695,39 @@ class WPML_LLMS_Course_Fixer {
             // Access Plan Related (if stored as course meta)
             '_llms_access_plans',                    // Access Plans
             
-            // Additional Course Options
+            // Reviews & Comments Settings (Complete)
             '_llms_enable_reviews',                  // Enable Reviews
-            '_llms_reviews_enabled',                 // Reviews Enabled (alternative)
+            '_llms_reviews_enabled',                 // Reviews Enabled (primary field)
+            '_llms_display_reviews',                 // Display Reviews on Course Page
+            '_llms_num_reviews',                     // Number of Reviews to Display
+            '_llms_multiple_reviews_disabled',       // Disable Multiple Reviews per User
             '_llms_enable_comments',                 // Enable Comments
+            
+            // Additional Course Meta Fields
+            '_llms_instructors',                     // Course Instructors
+            '_llms_course_tags',                     // Course Tags
+            '_llms_course_categories',               // Course Categories
+            '_llms_course_tracks',                   // Course Tracks
+            '_llms_course_difficulty',               // Course Difficulty (taxonomy)
+            '_llms_course_status',                   // Course Status
+            '_llms_course_privacy',                  // Course Privacy Settings
+            '_llms_course_forum',                    // Course Forum Settings
+            '_llms_course_forum_enabled',            // Enable Course Forum
+            '_llms_course_forum_id',                 // Course Forum ID
+            
+            // Engagement & Gamification
+            '_llms_course_points',                   // Course Points
+            '_llms_course_badges',                   // Course Badges
+            '_llms_course_leaderboard',              // Course Leaderboard
+            '_llms_course_social_sharing',           // Social Sharing Settings
+            
+            // Advanced Course Settings
+            '_llms_course_retake_enabled',           // Allow Course Retakes
+            '_llms_course_retake_limit',             // Course Retake Limit
+            '_llms_course_time_limit',               // Course Time Limit
+            '_llms_course_time_limit_enabled',       // Enable Course Time Limit
+            '_llms_course_expiration',               // Course Expiration
+            '_llms_course_expiration_enabled',       // Enable Course Expiration
         );
         
         // Add stats tracking
