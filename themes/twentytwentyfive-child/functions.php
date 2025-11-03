@@ -47,6 +47,8 @@ require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/course-fixer.
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/auto-course-fixer.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/enrollment-sync.php';
 require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/progress-sync.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/course-meta-sync.php';
+require_once WPML_LLMS_CHILD_THEME_PATH . '/ldninjas-customization/lesson-meta-sync.php';
 
 /**
  * Enqueue admin assets
