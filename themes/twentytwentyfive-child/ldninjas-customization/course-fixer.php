@@ -80,8 +80,6 @@ class WPML_LLMS_Course_Fixer {
         
         $this->sync_course_enrollments($course_id, $translations);
         
-        $this->sync_course_metadata($course_id, $translations);
-        
         $this->stats['courses_processed']++;
         $this->stats['end_time'] = current_time('mysql');
         
@@ -616,22 +614,6 @@ class WPML_LLMS_Course_Fixer {
             }
         }
     }
-    
-    /**
-     * Sync course metadata (now handled by separate meta sync files)
-     * This method is kept for backward compatibility but functionality moved to course-meta-sync.php
-     */
-    private function sync_course_metadata($course_id, $translations) {
-        // Meta synchronization is now handled by separate meta sync files:
-        // - course-meta-sync.php handles course meta fields
-        // - lesson-meta-sync.php handles lesson meta fields  
-        // - quiz-meta-sync.php handles quiz meta fields
-        // - question-meta-sync.php handles question meta fields
-        
-        // This method is kept for backward compatibility
-        // The actual sync is triggered by save_post hooks in the respective meta sync files
-        $this->stats['course_settings_synced'] = 0;
-    }
 
     /**
      * Get processing statistics
@@ -639,21 +621,7 @@ class WPML_LLMS_Course_Fixer {
     public function get_stats() {
         return $this->stats;
     }
-    
-    /**
-     * Clear stats
-     */
-    public function reset() {
-        $this->init_stats();
-    }
 }
 
 // Initialize the course fixer
 new WPML_LLMS_Course_Fixer();
-
-// Include separate meta synchronization files
-// These files handle automatic meta field synchronization for each post type
-require_once __DIR__ . '/course-meta-sync.php';
-require_once __DIR__ . '/lesson-meta-sync.php';
-require_once __DIR__ . '/quiz-meta-sync.php';
-require_once __DIR__ . '/question-meta-sync.php';

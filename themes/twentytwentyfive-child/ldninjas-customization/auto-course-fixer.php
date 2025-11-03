@@ -43,7 +43,7 @@ class WPML_LLMS_Auto_Course_Fixer {
      */
     private function init_hooks() {
 
-        add_action('save_post', array($this, 'on_post_saved'), 20, 3);
+        // add_action('save_post', array($this, 'on_post_saved'), 20, 3);
         add_action('wpml_pro_translation_completed', array($this, 'on_translation_completed'), 10, 3);
     }
     

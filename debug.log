@@ -10,3 +10,133 @@
 [01-Nov-2025 15:09:47 UTC] PHP Warning:  Array to string conversion in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\course-fixer.php on line 549
 [01-Nov-2025 15:09:49 UTC] PHP Warning:  Array to string conversion in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\course-fixer.php on line 549
 [01-Nov-2025 15:09:49 UTC] PHP Warning:  Array to string conversion in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\course-fixer.php on line 549
+[02-Nov-2025 07:57:42 UTC] Automatic updates starting...
+[02-Nov-2025 07:57:44 UTC]   Automatic plugin updates starting...
+[02-Nov-2025 07:57:44 UTC]   Automatic plugin updates complete.
+[02-Nov-2025 07:57:48 UTC] Automatic updates complete.
+[03-Nov-2025 10:14:36 UTC] PHP Parse error:  syntax error, unexpected token "if" in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 55
+[03-Nov-2025 10:14:36 UTC] PHP Warning:  Trying to access array offset on value of type bool in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-recovery-mode-email-service.php on line 367
+[03-Nov-2025 10:14:36 UTC] PHP Warning:  Trying to access array offset on value of type bool in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-recovery-mode-email-service.php on line 368
+[03-Nov-2025 10:14:44 UTC] PHP Parse error:  syntax error, unexpected token "if" in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 55
+[03-Nov-2025 10:14:45 UTC] PHP Parse error:  syntax error, unexpected token "if" in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 55
+[03-Nov-2025 10:14:48 UTC] PHP Parse error:  syntax error, unexpected token "if" in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 55
+[03-Nov-2025 10:14:56 UTC] PHP Parse error:  syntax error, unexpected token "if" in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 55
+[03-Nov-2025 10:25:13 UTC] Cron reschedule event error for hook: action_scheduler_run_queue, Error code: could_not_set, Error message: The cron event list could not be saved., Data: {"schedule":"every_minute","args":["WP Cron"],"interval":60}
+[03-Nov-2025 14:29:41 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method WPML_LLMS_Lesson_Meta_Sync::get_quiz_translations() in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php:131
+Stack trace:
+#0 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php(52): WPML_LLMS_Lesson_Meta_Sync->sync_quiz_on_save(Object(LLMS_Quiz), Array, Object(LLMS_Lesson))
+#1 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): WPML_LLMS_Lesson_Meta_Sync->hook_after_lesson_update(Array, Array, Object(LLMS_Lesson), false)
+#2 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(205): WP_Hook->apply_filters(Array, Array)
+#3 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1109): apply_filters('llms_builder_up...', Array, Array, Object(LLMS_Lesson), false)
+#4 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1370): LLMS_Admin_Builder::update_lessons(Array, Object(LLMS_Section))
+#5 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(931): LLMS_Admin_Builder::update_section(Array, 594)
+#6 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(478): LLMS_Admin_Builder::process_updates(Array)
+#7 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(334): LLMS_Admin_Builder::heartbeat_received(Array, Array)
+#8 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.handler.php(1133): LLMS_Admin_Builder::handle_ajax(Array)
+#9 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.php(100): LLMS_AJAX_Handler::llms_builder(Array)
+#10 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): LLMS_AJAX::handle('')
+#11 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(348): WP_Hook->apply_filters('', Array)
+#12 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(517): WP_Hook->do_action(Array)
+#13 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-admin\admin-ajax.php(192): do_action('wp_ajax_llms_bu...')
+#14 {main}
+  thrown in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 131
+[03-Nov-2025 14:30:15 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method WPML_LLMS_Lesson_Meta_Sync::get_quiz_translations() in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php:131
+Stack trace:
+#0 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php(52): WPML_LLMS_Lesson_Meta_Sync->sync_quiz_on_save(Object(LLMS_Quiz), Array, Object(LLMS_Lesson))
+#1 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): WPML_LLMS_Lesson_Meta_Sync->hook_after_lesson_update(Array, Array, Object(LLMS_Lesson), false)
+#2 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(205): WP_Hook->apply_filters(Array, Array)
+#3 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1109): apply_filters('llms_builder_up...', Array, Array, Object(LLMS_Lesson), false)
+#4 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1370): LLMS_Admin_Builder::update_lessons(Array, Object(LLMS_Section))
+#5 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(931): LLMS_Admin_Builder::update_section(Array, 594)
+#6 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(478): LLMS_Admin_Builder::process_updates(Array)
+#7 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(334): LLMS_Admin_Builder::heartbeat_received(Array, Array)
+#8 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.handler.php(1133): LLMS_Admin_Builder::handle_ajax(Array)
+#9 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.php(100): LLMS_AJAX_Handler::llms_builder(Array)
+#10 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): LLMS_AJAX::handle('')
+#11 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(348): WP_Hook->apply_filters('', Array)
+#12 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(517): WP_Hook->do_action(Array)
+#13 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-admin\admin-ajax.php(192): do_action('wp_ajax_llms_bu...')
+#14 {main}
+  thrown in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 131
+[03-Nov-2025 14:30:44 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method WPML_LLMS_Lesson_Meta_Sync::get_quiz_translations() in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php:132
+Stack trace:
+#0 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php(53): WPML_LLMS_Lesson_Meta_Sync->sync_quiz_on_save(Object(LLMS_Quiz), Array, Object(LLMS_Lesson))
+#1 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): WPML_LLMS_Lesson_Meta_Sync->hook_after_lesson_update(Array, Array, Object(LLMS_Lesson), false)
+#2 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(205): WP_Hook->apply_filters(Array, Array)
+#3 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1109): apply_filters('llms_builder_up...', Array, Array, Object(LLMS_Lesson), false)
+#4 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1370): LLMS_Admin_Builder::update_lessons(Array, Object(LLMS_Section))
+#5 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(931): LLMS_Admin_Builder::update_section(Array, 594)
+#6 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(478): LLMS_Admin_Builder::process_updates(Array)
+#7 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(334): LLMS_Admin_Builder::heartbeat_received(Array, Array)
+#8 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.handler.php(1133): LLMS_Admin_Builder::handle_ajax(Array)
+#9 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.php(100): LLMS_AJAX_Handler::llms_builder(Array)
+#10 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): LLMS_AJAX::handle('')
+#11 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(348): WP_Hook->apply_filters('', Array)
+#12 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(517): WP_Hook->do_action(Array)
+#13 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-admin\admin-ajax.php(192): do_action('wp_ajax_llms_bu...')
+#14 {main}
+  thrown in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 132
+[03-Nov-2025 14:31:09 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method WPML_LLMS_Lesson_Meta_Sync::get_quiz_translations() in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php:132
+Stack trace:
+#0 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php(53): WPML_LLMS_Lesson_Meta_Sync->sync_quiz_on_save(Object(LLMS_Quiz), Array, Object(LLMS_Lesson))
+#1 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): WPML_LLMS_Lesson_Meta_Sync->hook_after_lesson_update(Array, Array, Object(LLMS_Lesson), false)
+#2 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(205): WP_Hook->apply_filters(Array, Array)
+#3 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1109): apply_filters('llms_builder_up...', Array, Array, Object(LLMS_Lesson), false)
+#4 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1370): LLMS_Admin_Builder::update_lessons(Array, Object(LLMS_Section))
+#5 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(931): LLMS_Admin_Builder::update_section(Array, 594)
+#6 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(478): LLMS_Admin_Builder::process_updates(Array)
+#7 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(334): LLMS_Admin_Builder::heartbeat_received(Array, Array)
+#8 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.handler.php(1133): LLMS_Admin_Builder::handle_ajax(Array)
+#9 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.php(100): LLMS_AJAX_Handler::llms_builder(Array)
+#10 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): LLMS_AJAX::handle('')
+#11 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(348): WP_Hook->apply_filters('', Array)
+#12 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(517): WP_Hook->do_action(Array)
+#13 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-admin\admin-ajax.php(192): do_action('wp_ajax_llms_bu...')
+#14 {main}
+  thrown in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 132
+[03-Nov-2025 14:32:04 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method WPML_LLMS_Lesson_Meta_Sync::get_quiz_translations() in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php:132
+Stack trace:
+#0 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php(53): WPML_LLMS_Lesson_Meta_Sync->sync_quiz_on_save(Object(LLMS_Quiz), Array, Object(LLMS_Lesson))
+#1 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): WPML_LLMS_Lesson_Meta_Sync->hook_after_lesson_update(Array, Array, Object(LLMS_Lesson), false)
+#2 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(205): WP_Hook->apply_filters(Array, Array)
+#3 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1109): apply_filters('llms_builder_up...', Array, Array, Object(LLMS_Lesson), false)
+#4 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1370): LLMS_Admin_Builder::update_lessons(Array, Object(LLMS_Section))
+#5 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(931): LLMS_Admin_Builder::update_section(Array, 594)
+#6 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(478): LLMS_Admin_Builder::process_updates(Array)
+#7 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(334): LLMS_Admin_Builder::heartbeat_received(Array, Array)
+#8 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.handler.php(1133): LLMS_Admin_Builder::handle_ajax(Array)
+#9 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.php(100): LLMS_AJAX_Handler::llms_builder(Array)
+#10 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): LLMS_AJAX::handle('')
+#11 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(348): WP_Hook->apply_filters('', Array)
+#12 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(517): WP_Hook->do_action(Array)
+#13 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-admin\admin-ajax.php(192): do_action('wp_ajax_llms_bu...')
+#14 {main}
+  thrown in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 132
+[03-Nov-2025 14:32:35 UTC] PHP Fatal error:  Uncaught Error: Call to undefined method WPML_LLMS_Lesson_Meta_Sync::get_quiz_translations() in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php:131
+Stack trace:
+#0 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php(52): WPML_LLMS_Lesson_Meta_Sync->sync_quiz_on_save(Object(LLMS_Quiz), Array, Object(LLMS_Lesson))
+#1 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): WPML_LLMS_Lesson_Meta_Sync->hook_after_lesson_update(Array, Array, Object(LLMS_Lesson), false)
+#2 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(205): WP_Hook->apply_filters(Array, Array)
+#3 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1109): apply_filters('llms_builder_up...', Array, Array, Object(LLMS_Lesson), false)
+#4 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(1370): LLMS_Admin_Builder::update_lessons(Array, Object(LLMS_Section))
+#5 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(931): LLMS_Admin_Builder::update_section(Array, 594)
+#6 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(478): LLMS_Admin_Builder::process_updates(Array)
+#7 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php(334): LLMS_Admin_Builder::heartbeat_received(Array, Array)
+#8 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.handler.php(1133): LLMS_Admin_Builder::handle_ajax(Array)
+#9 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.php(100): LLMS_AJAX_Handler::llms_builder(Array)
+#10 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): LLMS_AJAX::handle('')
+#11 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(348): WP_Hook->apply_filters('', Array)
+#12 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(517): WP_Hook->do_action(Array)
+#13 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-admin\admin-ajax.php(192): do_action('wp_ajax_llms_bu...')
+#14 {main}
+  thrown in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\themes\twentytwentyfive-child\ldninjas-customization\lesson-meta-sync.php on line 131
+[03-Nov-2025 15:47:51 UTC] PHP Fatal error:  Uncaught Error: Call to a member function toArray() on null in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php:361
+Stack trace:
+#0 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.handler.php(1133): LLMS_Admin_Builder::handle_ajax(Array)
+#1 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\class.llms.ajax.php(100): LLMS_AJAX_Handler::llms_builder(Array)
+#2 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(324): LLMS_AJAX::handle('')
+#3 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\class-wp-hook.php(348): WP_Hook->apply_filters('', Array)
+#4 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-includes\plugin.php(517): WP_Hook->do_action(Array)
+#5 C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-admin\admin-ajax.php(192): do_action('wp_ajax_llms_bu...')
+#6 {main}
+  thrown in C:\Users\Zeeshan Ldninjas\Local Sites\the-heart-guide\app\public\wp-content\plugins\lifterlms\includes\admin\class.llms.admin.builder.php on line 361

@@ -51,6 +51,7 @@ class WPML_LLMS_Course_Meta_Sync {
      * @param bool $update Whether this is an existing post being updated
      */
     public function handle_course_meta_sync($post_id, $post, $update) {
+        
         // Skip if this is an autosave, revision, or bulk edit
         if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id) || (defined('DOING_BULK_EDIT') && DOING_BULK_EDIT)) {
             return;
@@ -125,113 +126,79 @@ class WPML_LLMS_Course_Meta_Sync {
      * @param array $translations Array of translation data
      */
     private function sync_course_metadata($course_id, $translations) {
-        
-        // Comprehensive list of LifterLMS course meta fields to sync
+
         $sync_fields = array(
-            // General Settings
-            '_llms_length',                          // Course Length
-            '_llms_post_course_difficulty',          // Course Difficulty Category
-            '_llms_video_embed',                     // Featured Video
-            '_llms_tile_featured_video',             // Display Featured Video on Course Tile
-            '_llms_audio_embed',                     // Featured Audio
-            
-            // Sales Page Settings
-            '_llms_sales_page_content_type',         // Sales Page Content Type
-            '_llms_sales_page_content_page_id',      // Sales Page Content Page ID
-            '_llms_sales_page_content_url',          // Sales Page Redirect URL
-            
-            // Restrictions Settings
-            '_llms_content_restricted_message',      // Content Restricted Message
-            '_llms_enrollment_period',               // Enable Enrollment Period
-            '_llms_enrollment_start_date',           // Enrollment Start Date
-            '_llms_enrollment_end_date',             // Enrollment End Date
-            '_llms_enrollment_opens_message',        // Enrollment Opens Message
-            '_llms_enrollment_closed_message',       // Enrollment Closed Message
-            '_llms_time_period',                     // Enable Course Time Period
-            '_llms_start_date',                      // Course Start Date
-            '_llms_end_date',                        // Course End Date
-            '_llms_course_opens_message',            // Course Opens Message
-            '_llms_course_closed_message',           // Course Closed Message
-            
-            // Prerequisites Settings
-            '_llms_has_prerequisite',                // Has Prerequisites
-            '_llms_prerequisite',                    // Prerequisite Course ID
-            '_llms_prerequisite_track',              // Prerequisite Track ID
-            
-            // Drip Settings
-            '_llms_drip_method',                     // Drip Method
-            '_llms_days_before_available',           // Days Before Available
-            '_llms_date_available',                  // Date Available
-            
-            // Catalog Settings
-            '_llms_catalog_visibility',              // Catalog Visibility
-            '_llms_featured',                        // Featured Course
-            
-            // Engagement Settings
-            '_llms_enable_capacity',                 // Enable Capacity
-            '_llms_capacity',                        // Course Capacity
-            '_llms_capacity_message',                // Capacity Reached Message
-            
-            // Legacy/Additional Fields
-            '_llms_difficulty_id',                   // Legacy Difficulty ID
-            '_llms_track_id',                        // Track ID
-            '_llms_course_image',                    // Course Image
-            '_llms_course_video_embed',              // Legacy Video Embed
-            
-            // Completion Settings
-            '_llms_enable_completion_tracking',      // Enable Completion Tracking
-            '_llms_completion_redirect',             // Completion Redirect
-            '_llms_completion_redirect_url',         // Completion Redirect URL
-            
-            // Certificate & Achievement Settings
-            '_llms_certificate',                     // Certificate Template
-            '_llms_certificate_title',               // Certificate Title
-            '_llms_achievement',                     // Achievement Template
-            '_llms_achievement_title',               // Achievement Title
-            
-            // Notification Settings
-            '_llms_enable_notifications',            // Enable Notifications
-            
-            // Custom Fields (if any)
-            '_llms_custom_excerpt',                  // Custom Excerpt
-            '_llms_points',                          // Points Awarded
-            
-            // Access Plan Related (if stored as course meta)
-            '_llms_access_plans',                    // Access Plans
-            
-            // Reviews & Comments Settings (Complete)
-            '_llms_enable_reviews',                  // Enable Reviews
-            '_llms_reviews_enabled',                 // Reviews Enabled (primary field)
-            '_llms_display_reviews',                 // Display Reviews on Course Page
-            '_llms_num_reviews',                     // Number of Reviews to Display
-            '_llms_multiple_reviews_disabled',       // Disable Multiple Reviews per User
-            '_llms_enable_comments',                 // Enable Comments
-            
-            // Additional Course Meta Fields
-            '_llms_instructors',                     // Course Instructors
-            '_llms_course_tags',                     // Course Tags
-            '_llms_course_categories',               // Course Categories
-            '_llms_course_tracks',                   // Course Tracks
-            '_llms_course_difficulty',               // Course Difficulty (taxonomy)
-            '_llms_course_status',                   // Course Status
-            '_llms_course_privacy',                  // Course Privacy Settings
-            '_llms_course_forum',                    // Course Forum Settings
-            '_llms_course_forum_enabled',            // Enable Course Forum
-            '_llms_course_forum_id',                 // Course Forum ID
-            
-            // Engagement & Gamification
-            '_llms_course_points',                   // Course Points
-            '_llms_course_badges',                   // Course Badges
-            '_llms_course_leaderboard',              // Course Leaderboard
-            '_llms_course_social_sharing',           // Social Sharing Settings
-            
-            // Advanced Course Settings
-            '_llms_course_retake_enabled',           // Allow Course Retakes
-            '_llms_course_retake_limit',             // Course Retake Limit
-            '_llms_course_time_limit',               // Course Time Limit
-            '_llms_course_time_limit_enabled',       // Enable Course Time Limit
-            '_llms_course_expiration',               // Course Expiration
-            '_llms_course_expiration_enabled',       // Enable Course Expiration
+            '_llms_length',
+            '_llms_post_course_difficulty',
+            '_llms_video_embed',
+            '_llms_tile_featured_video',
+            '_llms_audio_embed',
+            '_llms_sales_page_content_type',
+            '_llms_sales_page_content_page_id',
+            '_llms_sales_page_content_url',
+            '_llms_content_restricted_message',
+            '_llms_enrollment_period',
+            '_llms_enrollment_start_date',
+            '_llms_enrollment_end_date',
+            '_llms_enrollment_opens_message',
+            '_llms_enrollment_closed_message',
+            '_llms_time_period',
+            '_llms_start_date',
+            '_llms_end_date',
+            '_llms_course_opens_message',
+            '_llms_course_closed_message',
+            '_llms_has_prerequisite',
+            '_llms_prerequisite',
+            '_llms_prerequisite_track',
+            '_llms_drip_method',
+            '_llms_days_before_available',
+            '_llms_date_available',
+            '_llms_catalog_visibility',
+            '_llms_featured',
+            '_llms_enable_capacity',
+            '_llms_capacity',
+            '_llms_capacity_message',
+            '_llms_difficulty_id',
+            '_llms_track_id',
+            '_llms_course_image',
+            '_llms_course_video_embed',
+            '_llms_enable_completion_tracking',
+            '_llms_completion_redirect',
+            '_llms_completion_redirect_url',
+            '_llms_certificate',
+            '_llms_certificate_title',
+            '_llms_achievement',
+            '_llms_achievement_title',
+            '_llms_enable_notifications',
+            '_llms_custom_excerpt',
+            '_llms_points',
+            '_llms_access_plans',
+            '_llms_enable_reviews',
+            '_llms_reviews_enabled',
+            '_llms_display_reviews',
+            '_llms_num_reviews',
+            '_llms_multiple_reviews_disabled',
+            '_llms_enable_comments',
+            '_llms_instructors',
+            '_llms_course_tags',
+            '_llms_course_categories',
+            '_llms_course_tracks',
+            '_llms_course_difficulty',
+            '_llms_course_status',
+            '_llms_course_privacy',
+            '_llms_course_forum',
+            '_llms_course_forum_enabled',
+            '_llms_course_forum_id',
+            '_llms_course_points',
+            '_llms_course_badges',
+            '_llms_course_leaderboard',
+            '_llms_course_social_sharing',
+            '_llms_course_retake_enabled',
+            '_llms_course_retake_limit',
+            '_llms_course_time_limit',
+            '_llms_course_time_limit_enabled',
+            '_llms_course_expiration',
+            '_llms_course_expiration_enabled'
         );
         
         // Add stats tracking
@@ -277,13 +244,6 @@ class WPML_LLMS_Course_Meta_Sync {
      */
     public function get_stats() {
         return $this->stats;
-    }
-    
-    /**
-     * Clear stats
-     */
-    public function reset() {
-        $this->init_stats();
     }
 }
 

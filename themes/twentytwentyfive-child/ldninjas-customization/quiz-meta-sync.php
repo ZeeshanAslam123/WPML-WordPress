@@ -73,28 +73,17 @@ class WPML_LLMS_Quiz_Meta_Sync {
             return;
         }
         
-        // Prevent infinite loops
-        if (defined('WPML_LLMS_SYNCING_QUIZ_META')) {
-            return;
-        }
-        define('WPML_LLMS_SYNCING_QUIZ_META', true);
-        
-        try {
-            // Get translations and sync meta fields
-            $translations = $this->get_quiz_translations($post_id);
-            if (!empty($translations)) {
-                $this->sync_quiz_metadata($post_id, $translations);
-            }
-        } catch (Exception $e) {
-            // Handle errors silently to prevent breaking the save process
-            error_log('WPML LLMS Quiz Meta Sync Error: ' . $e->getMessage());
+        // Get translations and sync meta fields
+        $translations = $this->get_quiz_translations($post_id);
+        if (!empty($translations)) {
+            $this->sync_quiz_metadata($post_id, $translations);
         }
     }
     
     /**
      * Get quiz translations
      */
-    private function get_quiz_translations($quiz_id) {
+    public function get_quiz_translations($quiz_id) {
         if (!function_exists('wpml_get_language_information')) {
             return array();
         }
@@ -124,79 +113,64 @@ class WPML_LLMS_Quiz_Meta_Sync {
      * @param int $quiz_id Source quiz ID
      * @param array $translations Array of translation data
      */
-    private function sync_quiz_metadata($quiz_id, $translations) {
+    public function sync_quiz_metadata($quiz_id, $translations) {
         
         // Comprehensive list of LifterLMS quiz meta fields to sync
         $sync_fields = array(
-            // Quiz Relationship & Structure
-            '_llms_lesson_id',                       // Parent Lesson ID
-            '_llms_quiz',                            // Quiz ID (self-reference)
-            '_llms_quiz_enabled',                    // Quiz Enabled
-            '_llms_assigned_quiz',                   // Assigned Quiz
-            
-            // Quiz Questions & Content
-            '_llms_questions',                       // Quiz Questions Array
-            '_llms_question_order',                  // Question Order
-            '_llms_randomize_questions',             // Randomize Questions
-            '_llms_show_correct_answer',             // Show Correct Answers
-            
-            // Quiz Settings & Configuration
-            '_llms_passing_percent',                 // Passing Percentage
-            '_llms_require_passing_grade',           // Require Passing Grade
-            '_llms_quiz_attempts',                   // Number of Attempts Allowed
-            '_llms_unlimited_attempts',              // Unlimited Attempts
-            '_llms_quiz_time_limit',                 // Quiz Time Limit (minutes)
-            '_llms_quiz_time_limit_enabled',         // Enable Time Limit
-            
-            // Quiz Behavior & Display
-            '_llms_show_results',                    // Show Results to Student
-            '_llms_show_correct_answer',             // Show Correct Answers
-            '_llms_quiz_description',                // Quiz Description
-            '_llms_quiz_instructions',               // Quiz Instructions
-            '_llms_quiz_intro',                      // Quiz Introduction
-            
-            // Grading & Feedback
-            '_llms_quiz_grading',                    // Grading Method
-            '_llms_quiz_grade_type',                 // Grade Type (points, percentage)
-            '_llms_quiz_points',                     // Total Points
-            '_llms_quiz_feedback',                   // Quiz Feedback
-            '_llms_quiz_success_message',            // Success Message
-            '_llms_quiz_failure_message',            // Failure Message
-            
-            // Quiz Restrictions & Access
-            '_llms_quiz_restricted',                 // Quiz Restricted
-            '_llms_quiz_restriction_message',        // Restriction Message
-            '_llms_quiz_prerequisite',               // Quiz Prerequisite
-            '_llms_quiz_has_prerequisite',           // Has Prerequisite
-            
-            // Advanced Quiz Settings
-            '_llms_quiz_retake_enabled',             // Allow Retakes
-            '_llms_quiz_retake_delay',               // Retake Delay
-            '_llms_quiz_randomize_answers',          // Randomize Answer Choices
-            '_llms_quiz_show_progress',              // Show Progress Bar
-            '_llms_quiz_navigation',                 // Quiz Navigation (linear, free)
-            
-            // Quiz Completion & Certificates
-            '_llms_quiz_certificate',               // Quiz Certificate
-            '_llms_quiz_achievement',               // Quiz Achievement
-            '_llms_quiz_completion_redirect',       // Completion Redirect
-            '_llms_quiz_completion_redirect_url',   // Completion Redirect URL
-            
-            // Quiz Analytics & Tracking
-            '_llms_quiz_track_attempts',            // Track Attempts
-            '_llms_quiz_analytics_enabled',         // Enable Analytics
-            '_llms_quiz_detailed_results',          // Detailed Results
-            
-            // Legacy Fields (for backward compatibility)
-            '_quiz_enabled',                        // Legacy Quiz Enabled
-            '_quiz_lesson_id',                      // Legacy Lesson ID
-            '_quiz_attempts',                       // Legacy Attempts
-            '_quiz_passing_percent',                // Legacy Passing Percent
-            
-            // Custom Fields
-            '_llms_quiz_custom_fields',             // Custom Fields Data
-            '_llms_quiz_meta',                      // Additional Quiz Meta
-            '_llms_quiz_settings',                  // Quiz Settings Array
+            '_llms_quiz_enabled',
+            '_llms_assigned_quiz',
+            '_llms_question_order',
+            '_llms_randomize_questions',
+            '_llms_show_correct_answer',
+            '_llms_passing_percent',
+            '_llms_require_passing_grade',
+            '_llms_quiz_attempts',
+            '_llms_unlimited_attempts',
+            '_llms_quiz_time_limit',
+            '_llms_quiz_time_limit_enabled',
+            '_llms_show_results',
+            '_llms_quiz_description',
+            '_llms_quiz_instructions',
+            '_llms_quiz_intro',
+            '_llms_quiz_grading',
+            '_llms_quiz_grade_type',
+            '_llms_quiz_points',
+            '_llms_quiz_feedback',
+            '_llms_quiz_success_message',
+            '_llms_quiz_failure_message',
+            '_llms_quiz_restricted',
+            '_llms_quiz_restriction_message',
+            '_llms_quiz_prerequisite',
+            '_llms_quiz_has_prerequisite',
+            '_llms_quiz_retake_enabled',
+            '_llms_disable_retake',
+            '_llms_quiz_retake_delay',
+            '_llms_quiz_randomize_answers',
+            '_llms_quiz_show_progress',
+            '_llms_quiz_navigation',
+            '_llms_quiz_certificate',
+            '_llms_quiz_achievement',
+            '_llms_quiz_completion_redirect',
+            '_llms_quiz_completion_redirect_url',
+            '_llms_quiz_track_attempts',
+            '_llms_quiz_analytics_enabled',
+            '_llms_quiz_detailed_results',
+            '_llms_can_be_resumed',
+            '_quiz_enabled',
+            '_quiz_lesson_id',
+            '_quiz_attempts',
+            '_quiz_passing_percent',
+            '_llms_quiz_custom_fields',
+            '_llms_quiz_meta',
+            '_llms_quiz_settings',
+            '_llms_time_limit',
+            '_llms_random_questions',
+            '_llms_limit_time',
+            '_llms_limit_attempts',
+            '_llms_allowed_attempts',
+            'referenced_media_ids',
+            'copied_media_ids',
+            '_wpml_word_count'
         );
         
         // Add stats tracking
@@ -242,13 +216,6 @@ class WPML_LLMS_Quiz_Meta_Sync {
      */
     public function get_stats() {
         return $this->stats;
-    }
-    
-    /**
-     * Clear stats
-     */
-    public function reset() {
-        $this->init_stats();
     }
 }
 

@@ -30,8 +30,32 @@ class WPML_LLMS_Lesson_Meta_Sync {
     public function __construct() {
         $this->init_stats();
         
-        // Hook into lesson save to automatically sync meta fields
-        add_action('save_post_lesson', array($this, 'handle_lesson_meta_sync'), 20, 3);
+        add_action('save_post_lesson', [$this, 'handle_lesson_meta_sync'], 20, 3);
+        add_filter('llms_builder_update_lesson', [ $this, 'hook_after_lesson_update' ], 999, 4);
+    }
+
+    /**
+     * Trigger after lesson update through course builder
+     */
+    public function hook_after_lesson_update($result, $lesson_data, $lesson, $created) {
+        // Now the lesson should have the updated data
+        if ($lesson && is_a($lesson, 'LLMS_Lesson')) {
+            // Trigger our lesson sync with fresh data
+            $this->sync_lesson_on_save($lesson, $lesson_data);
+
+            // Check for quiz updates
+            if (!empty($lesson_data['quiz']) && is_array($lesson_data['quiz'])) {
+                $quiz_id = $lesson->get('quiz');
+                if ($quiz_id) {
+                    $quiz = llms_get_post($quiz_id);
+                    if ($quiz && is_a($quiz, 'LLMS_Quiz')) {
+                        $this->sync_quiz_on_save($quiz, $lesson_data['quiz'], $lesson);
+                    }
+                }
+            }
+        }
+
+        return $result;
     }
     
     /**
@@ -42,6 +66,33 @@ class WPML_LLMS_Lesson_Meta_Sync {
             'lesson_meta_synced' => 0,
         );
     }
+
+    /**
+     * Sync lesson meta on save through course builder
+     */
+    public function sync_lesson_on_save($lesson, $lesson_data) {
+
+        $lesson_id = $lesson->get('id');
+
+        $translations = $this->get_lesson_translations($lesson_id);
+        if (!empty($translations)) {
+            $this->sync_lesson_metadata($lesson_id, $translations);
+        }
+    }
+
+    /**
+     * Sync quiz meta on save through course builder
+     */
+    public function sync_quiz_on_save($quiz, $quiz_data, $lesson) {
+
+        $quiz_id = $quiz->get('id');
+        
+        $quiz_obj = new WPML_LLMS_Quiz_Meta_Sync();
+        $translations = $quiz_obj->get_quiz_translations($quiz_id);
+        if (!empty($translations)) {
+            $quiz_obj->sync_quiz_metadata($quiz_id, $translations);
+        }
+    }
     
     /**
      * Handle lesson meta synchronization when a lesson is saved
@@ -51,6 +102,7 @@ class WPML_LLMS_Lesson_Meta_Sync {
      * @param bool $update Whether this is an existing post being updated
      */
     public function handle_lesson_meta_sync($post_id, $post, $update) {
+
         // Skip if this is an autosave, revision, or bulk edit
         if (wp_is_post_autosave($post_id) || wp_is_post_revision($post_id) || (defined('DOING_BULK_EDIT') && DOING_BULK_EDIT)) {
             return;
@@ -72,22 +124,11 @@ class WPML_LLMS_Lesson_Meta_Sync {
         if ($post_language_info['language_code'] !== $default_language) {
             return;
         }
-        
-        // Prevent infinite loops
-        if (defined('WPML_LLMS_SYNCING_LESSON_META')) {
-            return;
-        }
-        define('WPML_LLMS_SYNCING_LESSON_META', true);
-        
-        try {
-            // Get translations and sync meta fields
-            $translations = $this->get_lesson_translations($post_id);
-            if (!empty($translations)) {
-                $this->sync_lesson_metadata($post_id, $translations);
-            }
-        } catch (Exception $e) {
-            // Handle errors silently to prevent breaking the save process
-            error_log('WPML LLMS Lesson Meta Sync Error: ' . $e->getMessage());
+
+        // Get translations and sync meta fields
+        $translations = $this->get_lesson_translations($post_id);
+        if (!empty($translations)) {
+            $this->sync_lesson_metadata($post_id, $translations);
         }
     }
     
@@ -124,88 +165,59 @@ class WPML_LLMS_Lesson_Meta_Sync {
      * @param int $lesson_id Source lesson ID
      * @param array $translations Array of translation data
      */
-    private function sync_lesson_metadata($lesson_id, $translations) {
+    public function sync_lesson_metadata($lesson_id, $translations) {
         
-        // Comprehensive list of LifterLMS lesson meta fields to sync
         $sync_fields = array(
-            // General Settings
-            '_llms_video_embed',                     // Video Embed URL
-            '_llms_audio_embed',                     // Audio Embed URL
-            '_llms_free_lesson',                     // Free Lesson (checkbox)
-            
-            // Prerequisites Settings
-            '_llms_has_prerequisite',                // Enable Prerequisite
-            '_llms_prerequisite',                    // Prerequisite Lesson ID
-            '_llms_require_passing_grade',           // Require Passing Grade on Quiz
-            
-            // Drip Settings
-            '_llms_drip_method',                     // Drip Method (date, enrollment, start, prerequisite)
-            '_llms_days_before_available',           // Days Before Available (delay)
-            '_llms_date_available',                  // Date Available
-            '_llms_time_available',                  // Time Available
-            
-            // Lesson Structure & Relationships
-            '_llms_order',                           // Lesson Order/Sequence
-            '_llms_parent_course',                   // Parent Course ID
-            '_llms_parent_section',                  // Parent Section ID
-            
-            // Quiz Integration
-            '_llms_quiz',                            // Associated Quiz ID
-            '_llms_quiz_enabled',                    // Quiz Enabled for Lesson
-            
-            // Content & Media
-            '_llms_lesson_video_embed',              // Legacy Video Embed
-            '_llms_lesson_audio_embed',              // Legacy Audio Embed
-            '_llms_lesson_excerpt',                  // Lesson Excerpt
-            
-            // Completion & Progress
-            '_llms_completion_redirect',             // Completion Redirect
-            '_llms_completion_redirect_url',         // Completion Redirect URL
-            '_llms_points',                          // Points Awarded for Completion
-            
-            // Access & Restrictions
-            '_llms_content_restricted_message',      // Content Restricted Message
-            '_llms_lesson_restricted',               // Lesson Restricted
-            
-            // Advanced Settings
-            '_llms_lesson_length',                   // Lesson Length/Duration
-            '_llms_lesson_difficulty',               // Lesson Difficulty
-            '_llms_lesson_tags',                     // Lesson Tags
-            '_llms_lesson_categories',               // Lesson Categories
-            
-            // Engagement Features
-            '_llms_enable_comments',                 // Enable Comments on Lesson
-            '_llms_enable_reviews',                  // Enable Reviews on Lesson
-            '_llms_lesson_forum',                    // Lesson Forum Settings
-            '_llms_lesson_forum_enabled',            // Enable Lesson Forum
-            
-            // Custom Fields
-            '_llms_custom_fields',                   // Custom Fields Data
-            '_llms_lesson_custom_excerpt',           // Custom Excerpt
-            
-            // Legacy Fields (for backward compatibility)
-            '_video_embed',                          // Legacy Video Embed
-            '_audio_embed',                          // Legacy Audio Embed
-            '_has_prerequisite',                     // Legacy Has Prerequisite
-            '_prerequisite',                         // Legacy Prerequisite
-            '_days_before_avalailable',              // Legacy Days Before Available (typo in original)
+            '_llms_video_embed',
+            '_llms_audio_embed',
+            '_llms_free_lesson',
+            '_llms_has_prerequisite',
+            '_llms_prerequisite',
+            '_llms_require_passing_grade',
+            '_llms_drip_method',
+            '_llms_days_before_available',
+            '_llms_date_available',
+            '_llms_time_available',
+            '_llms_quiz',
+            '_llms_quiz_enabled',
+            '_llms_lesson_video_embed',
+            '_llms_lesson_audio_embed',
+            '_llms_lesson_excerpt',
+            '_llms_completion_redirect',
+            '_llms_completion_redirect_url',
+            '_llms_points',
+            '_llms_content_restricted_message',
+            '_llms_lesson_restricted',
+            '_llms_lesson_length',
+            '_llms_lesson_difficulty',
+            '_llms_lesson_tags',
+            '_llms_lesson_categories',
+            '_llms_enable_comments',
+            '_llms_enable_reviews',
+            '_llms_lesson_forum',
+            '_llms_lesson_forum_enabled',
+            '_llms_custom_fields',
+            '_llms_lesson_custom_excerpt',
+            '_video_embed',
+            '_audio_embed',
+            '_has_prerequisite',
+            '_prerequisite',
+            '_days_before_avalailable'
         );
-        
+
         // Add stats tracking
         $settings_synced = 0;
         
         foreach ($translations as $lang_code => $translation) {
             foreach ($sync_fields as $field) {
+
                 $main_value = get_post_meta($lesson_id, $field, true);
                 $current_value = get_post_meta($translation['id'], $field, true);
                 
-                // Only update if values are different or if main value exists and current doesn't
                 if ($main_value !== $current_value && ($main_value !== '' || $current_value !== '')) {
                     if ($main_value === '' || $main_value === false || $main_value === null) {
-                        // Delete the meta if main lesson doesn't have it
                         delete_post_meta($translation['id'], $field);
                     } else {
-                        // Update with main lesson value
                         update_post_meta($translation['id'], $field, $main_value);
                     }
                     $settings_synced++;
@@ -234,13 +246,6 @@ class WPML_LLMS_Lesson_Meta_Sync {
      */
     public function get_stats() {
         return $this->stats;
-    }
-    
-    /**
-     * Clear stats
-     */
-    public function reset() {
-        $this->init_stats();
     }
 }
 
